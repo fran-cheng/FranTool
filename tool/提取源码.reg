@@ -1,0 +1,3 @@
+Windows Registry Editor Version 5.00
+[HKEY_CLASSES_ROOT\*\shell\Ã·»°APK‘¥¬Î\command]
+@="c:\\windows\\system32\\cmd.exe /k dexsrcwithpath %1"

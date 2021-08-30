@@ -9,21 +9,10 @@ import static java.lang.Integer.valueOf;
 
 public class ApkBuild {
 
-    private void apkToolBuild(String apkDir) {
-        RuntimeHelper r = RuntimeHelper.getInstance();
-        String s = "apktool b  \"" + apkDir.replace("\\", "/") + "\"";
-
-        try {
-            r.run(s);
-//             Utils.print("Done!");
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-    }
 
     public static void main(String[] args) {
         ApkBuild apkBuild = new ApkBuild();
-        if (args.length != 1)
+        if (args.length != 2)
             throw new RuntimeException("参数不对!");
 //
         String arg1 = args[0];
@@ -54,6 +43,23 @@ public class ApkBuild {
         String s = "apktool d -f  \"" + apkFile.replace("\\", "/") + "\"";
         try {
             r.run(s);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+    }
+
+    /**
+     * 调用回编
+     *
+     * @param apkDir 待回编APK
+     */
+    private void apkToolBuild(String apkDir) {
+        RuntimeHelper r = RuntimeHelper.getInstance();
+        String s = "apktool b  \"" + apkDir.replace("\\", "/") + "\"";
+
+        try {
+            r.run(s);
+//             Utils.print("Done!");
         } catch (Exception e) {
             e.printStackTrace();
         }
