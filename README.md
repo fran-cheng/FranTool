@@ -7,18 +7,29 @@
 
 2、设置JAVA_HOME
 
-# 使用步骤
-1、下载Tool.zip
+# 在window下使用步骤如下：
 
-2、解压放到合适的位置
+1. 下载[tool.zip](https://github.com/qq821978827/FranTool/releases/download/tool/tool.zip)
+2. 解压到自己喜欢的位置
+3. 将解压的位置添加到环境变量path
+4. 双击需要的.reg
+5. 已经可以正常使用了
 
-3、双击需要的.reg文件
+## 使用演示-解包
+![使用演示-解包](https://github.com/qq821978827/FranTool/blob/main/gif/decomposeApk.gif)
 
-4、将解压的路径添加到环境变量
+## 使用演示-创建签名
+![使用演示-创建签名](https://github.com/qq821978827/FranTool/blob/main/gif/createSign.gif)
 
+## 使用演示-修改id
+![使用演示-修改id](https://github.com/qq821978827/FranTool/blob/main/gif/amendId.gif)
 
+## 使用演示-打包
+![使用演示-打包](https://github.com/qq821978827/FranTool/blob/main/gif/packageApk.gif)
 
-# 使用如图
+## 使用演示-提取源码
+![使用演示-提取源码](https://github.com/qq821978827/FranTool/blob/main/gif/extractApk.gif)
 
-![image](https://user-images.githubusercontent.com/49750562/131319021-12c5ddf2-7186-40ec-a12e-40d69b605483.png)
+## 使用演示-查看源码
+![使用演示-查看源码](https://github.com/qq821978827/FranTool/blob/main/gif/checkApk.gif)
 
