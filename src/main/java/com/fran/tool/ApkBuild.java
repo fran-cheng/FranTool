@@ -16,18 +16,18 @@ public class ApkBuild {
         if (args.length != 2)
             throw new RuntimeException("参数不对!");
 //
-        String arg1 = args[0];
+        String key = args[0];
 
-        String arg2 = args[1];
-        if (arg1.equalsIgnoreCase("apkDecompress")) {
-            apkBuild.apkDecompress(arg2);
+        String path = args[1];
+        if (key.equalsIgnoreCase("apkDecompress")) {
+            apkBuild.apkDecompress(path);
 
-        } else if (arg1.equalsIgnoreCase("apkBuild")) {
-            apkBuild.deleteBuild(arg2);
-            apkBuild.apkToolBuild(arg2);
-            apkBuild.sign(arg2);
-        } else if (arg1.equalsIgnoreCase("key")) {
-            new KeyTool(arg2);
+        } else if (key.equalsIgnoreCase("apkBuild")) {
+            apkBuild.deleteBuild(path);
+            apkBuild.apkToolBuild(path);
+            apkBuild.sign(path);
+        } else if (key.equalsIgnoreCase("key")) {
+            new KeyTool(path);
         }
 
         Utils.log("Done!");
@@ -37,13 +37,12 @@ public class ApkBuild {
     /**
      * 调用解包
      *
-     * @param apkFile 待解包APK
+     * @param apkFilePath 待解包APK
      */
-    private void apkDecompress(String apkFile) {
-        RuntimeHelper r = RuntimeHelper.getInstance();
-        String s = "apktool d -f  \"" + apkFile.replace("\\", "/") + "\"";
+    private void apkDecompress(String apkFilePath) {
+        String cmd = String.format("apktool d -f --only-main-classes %s ", apkFilePath);
         try {
-            r.run(s);
+            RuntimeHelper.getInstance().run(cmd);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -52,15 +51,13 @@ public class ApkBuild {
     /**
      * 调用回编
      *
-     * @param apkDir 待回编APK
+     * @param apkDirPath 待回编APK
      */
-    private void apkToolBuild(String apkDir) {
-        RuntimeHelper r = RuntimeHelper.getInstance();
-        String s = "apktool b  \"" + apkDir.replace("\\", "/") + "\"";
+    private void apkToolBuild(String apkDirPath) {
+        String cmd = String.format("apktool b %s", apkDirPath);
 
         try {
-            r.run(s);
-//             Utils.print("Done!");
+            RuntimeHelper.getInstance().run(cmd);
         } catch (Exception e) {
             e.printStackTrace();
         }
@@ -72,8 +69,8 @@ public class ApkBuild {
      * @param dir 待签名APK
      */
     private void sign(String dir) {
-        zipalign(dir);
-        new Sign(dir);
+        String outApk = zipalign(dir);
+        new Sign(dir, outApk);
     }
 
     /**
@@ -81,12 +78,20 @@ public class ApkBuild {
      *
      * @param dir 待对齐APK
      */
-    private void zipalign(String dir) {
+    private String zipalign(String dir) {
         String name = new File(dir).getName();
-        String apk = dir + "\\dist\\" + name + ".apk";
-        String out = dir + "\\" + name + "_temp" + ".apk";
-        String s = "zipalign -f 4 " + apk + " " + out;
-        RuntimeHelper.getInstance().run(s);
+        File distFile = new File(Utils.linkPath(dir, "dist"));
+
+        File[] files = distFile.listFiles();
+        assert files != null;
+        String buildApk = files[0].getPath();
+
+        String outApk = Utils.linkPath(dir, name + "_temp" + ".apk");
+
+        String cmd = String.format("zipalign -f 4 %s %s", buildApk, outApk);
+        RuntimeHelper.getInstance().run(cmd);
+
+        return outApk;
     }
 
     /**
@@ -95,13 +100,12 @@ public class ApkBuild {
      * @param dir 工作路径
      */
     private void deleteBuild(String dir) {
-        File build = new File(dir + "\\build");
-        File dist = new File(dir + "\\dist");
+        File build = new File(Utils.linkPath(dir, "build"));
+        File dist = new File(Utils.linkPath(dir, "dist"));
         if (build.exists())
             deleteDir(build);
         if (dist.exists())
             deleteDir(dist);
-
     }
 
     /**

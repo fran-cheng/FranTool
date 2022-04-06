@@ -5,23 +5,22 @@ import java.net.MalformedURLException;
 
 public class Sign {
 
-    public Sign(String dir) {
+    public Sign(String dir, String inApk) {
         String[] info = findSignInfo(new File(dir), "key.keystore");
         if (info == null)
             throw new RuntimeException(dir + " 无签名文件！");
         String name = new File(dir).getName();
-        String apk = dir + "\\" + name + "_temp.apk";
         String out = dir + "\\" + name + "_sign.apk";
 
         String keystorefile = info[0];
         String password = info[1];
         String apksignerPath = getApkSigner();
 
-        String s = String.format("java -jar %s sign --ks %s --ks-pass pass:%s --in %s --out %s", apksignerPath, keystorefile, password, apk, out);
+        String s = String.format("java -jar %s sign --ks %s --ks-pass pass:%s --in %s --out %s", apksignerPath, keystorefile, password, inApk, out);
         Utils.log("Sign", s);
         RuntimeHelper.getInstance().run(s);
 
-        new File(apk).delete();
+        new File(inApk).delete();
     }
 
     private String[] findSignInfo(File dir, String fn) {

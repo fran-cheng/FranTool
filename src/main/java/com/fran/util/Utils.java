@@ -84,19 +84,19 @@ public class Utils {
 
     /**
      * 写文件
-     * @param file String
+     *
+     * @param file    File
      * @param content String
      * @param charset String
      * @return boolean
      */
-    public static boolean writeFile(String file, String content, String charset) {
+    public static boolean writeFile(File file, String content, String charset) {
         OutputStream os = null;
-        File f = new File(file);
 
         try {
-            if (!f.exists()) {
-                makeIfDir(f);
-                f.createNewFile();
+            if (!file.exists()) {
+                makeIfDir(file);
+                file.createNewFile();
             }
 
             os = new FileOutputStream(file);
@@ -110,7 +110,8 @@ public class Utils {
     }
 
     /**
-     *  生成dir
+     * 生成dir
+     *
      * @param f File
      */
     public static void makeIfDir(File f) {
@@ -129,7 +130,8 @@ public class Utils {
 
     /**
      * 读文件
-     * @param f  File
+     *
+     * @param f File
      * @return String
      */
     public static String read(File f) {
@@ -148,8 +150,9 @@ public class Utils {
 
     /**
      * inputStreamToString
+     *
      * @param is InputStream
-     * @return  String
+     * @return String
      */
     public static String inputStreamToString(InputStream is) {
 
@@ -160,6 +163,23 @@ public class Utils {
 
 
         return stringBuffer.toString();
+    }
+
+    /**
+     * 拼接地址
+     *
+     * @param basePath 基础路径
+     * @return path
+     */
+
+
+    public static String linkPath(String basePath, String... dentrys) {
+        StringBuilder stringBuilder = new StringBuilder(basePath);
+        for (String dentry : dentrys) {
+            stringBuilder.append(File.separator);
+            stringBuilder.append(dentry);
+        }
+        return stringBuilder.toString();
     }
 
 }
