@@ -1,10 +1,11 @@
-import util.RuntimeHelper;
-import util.Sign;
-import util.Utils;
+package com.fran.tool;
+
+
+import com.fran.util.RuntimeHelper;
+import com.fran.util.Sign;
+import com.fran.util.Utils;
 
 import java.io.*;
-
-import static java.lang.Integer.valueOf;
 
 
 public class ApkBuild {
@@ -13,7 +14,7 @@ public class ApkBuild {
     public static void main(String[] args) {
         ApkBuild apkBuild = new ApkBuild();
         if (args.length != 2)
-            throw new RuntimeException("²ÎÊı²»¶Ô!");
+            throw new RuntimeException("å‚æ•°ä¸å¯¹!");
 //
         String arg1 = args[0];
 
@@ -34,9 +35,9 @@ public class ApkBuild {
 
 
     /**
-     * µ÷ÓÃ½â°ü
+     * è°ƒç”¨è§£åŒ…
      *
-     * @param apkFile ´ı½â°üAPK
+     * @param apkFile å¾…è§£åŒ…APK
      */
     private void apkDecompress(String apkFile) {
         RuntimeHelper r = RuntimeHelper.getInstance();
@@ -49,9 +50,9 @@ public class ApkBuild {
     }
 
     /**
-     * µ÷ÓÃ»Ø±à
+     * è°ƒç”¨å›ç¼–
      *
-     * @param apkDir ´ı»Ø±àAPK
+     * @param apkDir å¾…å›ç¼–APK
      */
     private void apkToolBuild(String apkDir) {
         RuntimeHelper r = RuntimeHelper.getInstance();
@@ -66,9 +67,9 @@ public class ApkBuild {
     }
 
     /**
-     * Ç©Ãû
+     * ç­¾å
      *
-     * @param dir ´ıÇ©ÃûAPK
+     * @param dir å¾…ç­¾åAPK
      */
     private void sign(String dir) {
         zipalign(dir);
@@ -76,9 +77,9 @@ public class ApkBuild {
     }
 
     /**
-     * ¶ÔÆë
+     * å¯¹é½
      *
-     * @param dir ´ı¶ÔÆëAPK
+     * @param dir å¾…å¯¹é½APK
      */
     private void zipalign(String dir) {
         String name = new File(dir).getName();
@@ -89,9 +90,9 @@ public class ApkBuild {
     }
 
     /**
-     * É¾³ıÖĞ¼äµÄ¹¹½¨ÎÄ¼ş
+     * åˆ é™¤ä¸­é—´çš„æ„å»ºæ–‡ä»¶
      *
-     * @param dir ¹¤×÷Â·¾¶
+     * @param dir å·¥ä½œè·¯å¾„
      */
     private void deleteBuild(String dir) {
         File build = new File(dir + "\\build");
@@ -104,9 +105,9 @@ public class ApkBuild {
     }
 
     /**
-     * É¾³ıÎÄ¼ş£¬ÎÄ¼ş¼Ğ
+     * åˆ é™¤æ–‡ä»¶ï¼Œæ–‡ä»¶å¤¹
      *
-     * @param file É¾³ıÂ·¾¶
+     * @param file åˆ é™¤è·¯å¾„
      */
     private void deleteDir(File file) {
         if (file.isDirectory()) {

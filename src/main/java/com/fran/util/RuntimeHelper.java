@@ -1,10 +1,8 @@
-package util;
+package com.fran.util;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-
-import static util.Utils.log;
 
 
 public class RuntimeHelper {
@@ -22,7 +20,7 @@ public class RuntimeHelper {
         return mInstance;
     }
 
-    //    Ö´ĞĞDOSÃüÁî,exeµÈ
+    //    æ‰§è¡ŒDOSå‘½ä»¤,exeç­‰
     public void run(String s) {
         String command = s.replace("\"", "");
         sIsWindow = System.getProperties().getProperty("os.name").toUpperCase().indexOf("WINDOWS") != -1;
@@ -36,12 +34,12 @@ public class RuntimeHelper {
             BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(reader));
             String ss;
             while ((ss = bufferedReader.readLine()) != null) {
-                log(ss);
+                Utils.log(ss);
             }
             if (process.waitFor() == 0) {
-//                    Utils.log("Ö´ĞĞ³É¹¦");
+//                    Utils.log("æ‰§è¡ŒæˆåŠŸ");
             } else {
-                Utils.log("Ö´ĞĞÊ§°Ü");
+                Utils.log("æ‰§è¡Œå¤±è´¥");
             }
 
         } catch (Exception e) {

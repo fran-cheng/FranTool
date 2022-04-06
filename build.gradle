@@ -1,0 +1,62 @@
+plugins {
+    id 'java'
+}
+
+group 'com.fran.tool'
+version '1.0-SNAPSHOT'
+
+sourceCompatibility = 1.8
+
+tasks.withType(JavaCompile) {
+    options.setEncoding("UTF-8")
+}
+
+repositories {
+    mavenCentral()
+    maven { url 'https://search.maven.org/' }
+}
+
+dependencies {
+
+}
+
+
+String outDir = 'out/FranTool'
+String outToolDir = 'tool'
+
+jar {
+    String classPath = ""
+    configurations.runtimeClasspath.each {
+        classPath = classPath + "libs/" + it.name + " "
+    }
+    manifest {
+        attributes 'Main-Class': 'com.fran.tool.ApkBuild'
+        attributes 'Class-Path': classPath
+    }
+}
+
+task copyJar(type: Copy) {
+    from jar.outputs
+    into "${outDir}"
+}
+
+task copyLibs(type: Copy) {
+    from configurations.runtimeClasspath
+    into "${outDir}/libs"
+}
+task copy2ToolJar(type: Copy, dependsOn: [copyJar, copyLibs]) {
+    from "${outDir}"
+
+    into "${outToolDir}"
+
+    rename { String fileName ->
+        fileName.replace("-" + "${version}", "")
+    }
+
+}
+
+task clearBuild(type: Delete) {
+    delete 'build', 'out'
+}
+
+task assembleRelease(dependsOn: [clearBuild, jar, copy2ToolJar])

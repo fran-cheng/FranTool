@@ -1,4 +1,4 @@
-package util;
+package com.fran.util;
 
 import java.io.File;
 import java.net.MalformedURLException;
@@ -8,7 +8,7 @@ public class Sign {
     public Sign(String dir) {
         String[] info = findSignInfo(new File(dir), "key.keystore");
         if (info == null)
-            throw new RuntimeException(dir + " 无签名文件！");
+            throw new RuntimeException(dir + " 鏃犵鍚嶆枃浠讹紒");
         String name = new File(dir).getName();
         String apk = dir + "\\" + name + "_temp.apk";
         String out = dir + "\\" + name + "_sign.apk";
