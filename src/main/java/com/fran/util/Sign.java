@@ -24,14 +24,14 @@ public class Sign {
     }
 
     private String[] findSignInfo(File dir, String fn) {
-        File f = new File(dir.getAbsolutePath() + "\\" + fn);
+        File f = new File(dir.getAbsolutePath(), fn);
         while (!f.exists()) {
             dir = dir.getParentFile();
             if (dir == null) {
                 f = null;
                 break;
             }
-            f = new File(dir.getAbsolutePath() + "\\" + fn);
+            f = new File(dir.getAbsolutePath(), fn);
         }
         if (f != null) {
             File passf = new File(dir, "password.ini");
