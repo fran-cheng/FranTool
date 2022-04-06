@@ -71,8 +71,8 @@ public class ApkBuild {
      * @param dir ´ýÇ©ÃûAPK
      */
     private void sign(String dir) {
-        new Sign(dir);
         zipalign(dir);
+        new Sign(dir);
     }
 
     /**
@@ -82,11 +82,10 @@ public class ApkBuild {
      */
     private void zipalign(String dir) {
         String name = new File(dir).getName();
-        String apk = dir + "\\" + name + "_temp.apk";
-        String out = dir + "\\" + name + "_signed" + ".apk";
+        String apk = dir + "\\dist\\" + name + ".apk";
+        String out = dir + "\\" + name + "_temp" + ".apk";
         String s = "zipalign -f 4 " + apk + " " + out;
         RuntimeHelper.getInstance().run(s);
-        new File(apk).delete();
     }
 
     /**

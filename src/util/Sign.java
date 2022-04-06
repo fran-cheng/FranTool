@@ -5,31 +5,27 @@ import java.net.MalformedURLException;
 
 public class Sign {
 
-    public Sign(String dir){
+    public Sign(String dir) {
         String[] info = findSignInfo(new File(dir), "key.keystore");
-        if(info == null)
-            throw new RuntimeException(dir+" 无签名文件！");
+        if (info == null)
+            throw new RuntimeException(dir + " 无签名文件！");
         String name = new File(dir).getName();
-        String apk = dir+"\\dist\\"+name+".apk";
-        String out = dir+"\\"+name+"_temp.apk";
+        String apk = dir + "\\" + name + "_temp.apk";
+        String out = dir + "\\" + name + "_sign.apk";
 
         String keystorefile = info[0];
         String password = info[1];
+        String apksignerPath = getApkSigner();
 
-        String s = null;
-        try {
-            s = getJavaHome()+"\\bin\\jarsigner -keystore \"" + new File(keystorefile).toURI().toURL() +
-                    "\" -storepass "+password+" -sigalg MD5withRSA -digestalg SHA1 -signedjar \"" + out + "\" \"" + apk +
-                    "\" " + info[2];
-            Utils.log("Sign",s);
-        } catch (MalformedURLException e) {
-            e.printStackTrace();
-        }
+        String s = String.format("java -jar %s sign --ks %s --ks-pass pass:%s --in %s --out %s", apksignerPath, keystorefile, password, apk, out);
+        Utils.log("Sign", s);
         RuntimeHelper.getInstance().run(s);
+
+        new File(apk).delete();
     }
 
-    private  String[] findSignInfo(File dir, String fn) {
-        File f = new File(dir.getAbsolutePath() + "\\"+fn);
+    private String[] findSignInfo(File dir, String fn) {
+        File f = new File(dir.getAbsolutePath() + "\\" + fn);
         while (!f.exists()) {
             dir = dir.getParentFile();
             if (dir == null) {
@@ -38,9 +34,9 @@ public class Sign {
             }
             f = new File(dir.getAbsolutePath() + "\\" + fn);
         }
-        if(f != null){
+        if (f != null) {
             File passf = new File(dir, "password.ini");
-            if(!passf.exists() || passf.isDirectory())
+            if (!passf.exists() || passf.isDirectory())
                 throw new RuntimeException("password.ini NOT FOUND!");
             String[] passinfo = Utils.read(passf).split(";");
             // keystore file path, password
@@ -48,11 +44,11 @@ public class Sign {
         }
         return null;
     }
-    private String getJavaHome(){
-        String home = System.getenv("JAVA_HOME");
-        if (home == null)
-            throw new RuntimeException("JAVA_HOME 未定义!");
 
-        return home;
+    private String getApkSigner() {
+        File file = new File(getClass().getProtectionDomain().getCodeSource().getLocation().getPath());
+        String jarFile = file.getParent() + File.separator + "apksigner.jar";
+
+        return jarFile;
     }
 }
