@@ -10,7 +10,7 @@ public class Sign {
         if (info == null)
             throw new RuntimeException(dir + " 无签名文件！");
         String name = new File(dir).getName();
-        String out = dir + "\\" + name + "_sign.apk";
+        String out = Utils.linkPath(dir, name + "_sign.apk");
 
         String keystorefile = info[0];
         String password = info[1];
@@ -46,8 +46,7 @@ public class Sign {
 
     private String getApkSigner() {
         File file = new File(getClass().getProtectionDomain().getCodeSource().getLocation().getPath());
-        String jarFile = file.getParent() + File.separator + "apksigner.jar";
 
-        return jarFile;
+        return Utils.linkPath(file.getParent(), "apksigner.jar");
     }
 }

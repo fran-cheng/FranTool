@@ -86,7 +86,7 @@ public class ApkBuild {
         assert files != null;
         String buildApk = files[0].getPath();
 
-        String outApk = Utils.linkPath(dir, name + "_temp" + ".apk");
+        String outApk = Utils.linkPath(dir, name + "_temp.apk");
 
         String cmd = String.format("zipalign -f 4 %s %s", buildApk, outApk);
         RuntimeHelper.getInstance().run(cmd);

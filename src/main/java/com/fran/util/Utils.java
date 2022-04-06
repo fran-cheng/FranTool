@@ -22,7 +22,7 @@ public class Utils {
      * @param tag String
      * @param s   String
      */
-    public static void log(String tag, String s) {
+    static void log(String tag, String s) {
         System.out.println(tag + " :  " + s);
     }
 
@@ -34,8 +34,8 @@ public class Utils {
      * @return String
      */
     public static String sha1(String strSrc, int len) {
-        MessageDigest md = null;
-        String strDes = null;
+        MessageDigest md;
+        String strDes;
         byte[] bt = strSrc.getBytes();
 
         try {
@@ -55,20 +55,20 @@ public class Utils {
      * @param bts byte
      * @return String
      */
-    public static String bytes2Hex(byte[] bts) {
-        String des = "";
-        String tmp = null;
+    private static String bytes2Hex(byte[] bts) {
+        StringBuilder stringBuilder = new StringBuilder();
+        String tmp;
 
-        for (int i = 0; i < bts.length; ++i) {
-            tmp = Integer.toHexString(bts[i] & 255);
+        for (byte bt : bts) {
+            tmp = Integer.toHexString(bt & 255);
             if (tmp.length() == 1) {
-                des = des + "0";
+                stringBuilder.append("0");
             }
 
-            des = des + tmp;
+            stringBuilder.append(tmp);
         }
 
-        return des;
+        return stringBuilder.toString();
     }
 
     /**
@@ -88,10 +88,9 @@ public class Utils {
      * @param file    File
      * @param content String
      * @param charset String
-     * @return boolean
      */
-    public static boolean writeFile(File file, String content, String charset) {
-        OutputStream os = null;
+    public static void writeFile(File file, String content, String charset) {
+        OutputStream os;
 
         try {
             if (!file.exists()) {
@@ -102,10 +101,8 @@ public class Utils {
             os = new FileOutputStream(file);
             os.write(content.getBytes(charset));
             os.close();
-            return true;
         } catch (Exception var6) {
             var6.printStackTrace();
-            return false;
         }
     }
 
@@ -114,7 +111,7 @@ public class Utils {
      *
      * @param f File
      */
-    public static void makeIfDir(File f) {
+    private static void makeIfDir(File f) {
         if (f.isDirectory()) {
             if (!f.exists()) {
                 f.mkdirs();
@@ -134,7 +131,7 @@ public class Utils {
      * @param f File
      * @return String
      */
-    public static String read(File f) {
+    static String read(File f) {
         String c = null;
 
         try {
@@ -154,15 +151,15 @@ public class Utils {
      * @param is InputStream
      * @return String
      */
-    public static String inputStreamToString(InputStream is) {
+    private static String inputStreamToString(InputStream is) {
 
         Scanner scanner = new Scanner(is);
-        StringBuffer stringBuffer = new StringBuffer();
+        StringBuilder stringBuilder = new StringBuilder();
         while (scanner.hasNext())
-            stringBuffer.append(scanner.next());
+            stringBuilder.append(scanner.next());
 
 
-        return stringBuffer.toString();
+        return stringBuilder.toString();
     }
 
     /**
