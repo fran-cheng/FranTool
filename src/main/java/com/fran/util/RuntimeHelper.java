@@ -7,7 +7,6 @@ import java.io.InputStreamReader;
 
 public class RuntimeHelper {
 
-    public static boolean sIsWindow;
     private static RuntimeHelper mInstance;
 
     public static RuntimeHelper getInstance() {
@@ -21,15 +20,14 @@ public class RuntimeHelper {
     }
 
     //    执行DOS命令,exe等
-    public void run(String s) {
-        String command = s.replace("\"", "");
-        sIsWindow = System.getProperties().getProperty("os.name").toUpperCase().indexOf("WINDOWS") != -1;
+    public void run(String command) {
         Runtime run = Runtime.getRuntime();
         try {
-            if (sIsWindow)
-                command = "cmd /c " + s;
+            Utils.log(command);
+            if (System.getProperties().getProperty("os.name").toUpperCase().contains("WINDOWS"))
+                command = "cmd /c " + command;
+
             Process process = run.exec(command);
-            Utils.log(s);
             InputStream reader = process.getInputStream();
             BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(reader));
             String ss;
@@ -39,7 +37,7 @@ public class RuntimeHelper {
             if (process.waitFor() == 0) {
 //                    Utils.log("执行成功");
             } else {
-                Utils.log("执行失败");
+                Utils.log("执行失败: " + process.waitFor());
             }
 
         } catch (Exception e) {
