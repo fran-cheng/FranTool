@@ -1,2 +1,2 @@
-"%~dp0jax-bin\jadx\bin\jadx-gui.bat" %1
+"%~dp0jadx-tool\jadx\bin\jadx-gui.bat" %1
 exit

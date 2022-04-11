@@ -1,6 +1,6 @@
-#!/bin/sh
+!/bin/sh
 
-#
+
 # dex2jar - Tools to work with android .dex and java .class files
 # Copyright (c) 2009-2013 Panxiaobo
 # 
