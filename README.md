@@ -9,7 +9,7 @@
 
 # 在window下使用步骤如下：
 
-1. 下载[tool.zip](https://github.com/qq821978827/FranTool/releases/download/tool/tool.zip)
+1. 下载[tool.zip](https://codeload.github.com/qq821978827/FranTool/zip/refs/tags/tool)
 2. 解压到自己喜欢的位置
 3. 将解压的位置添加到环境变量path
 4. 双击需要的.reg
