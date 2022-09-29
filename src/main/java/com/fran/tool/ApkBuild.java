@@ -7,14 +7,18 @@ import com.fran.util.Utils;
 
 import java.io.*;
 
-
+/**
+ * @author 程良明
+ * * 说明:主入口
+ **/
 public class ApkBuild {
 
 
     public static void main(String[] args) {
         ApkBuild apkBuild = new ApkBuild();
-        if (args.length != 2)
+        if (args.length != 2) {
             throw new RuntimeException("参数不对!");
+        }
 //
         String key = args[0];
 
@@ -102,10 +106,12 @@ public class ApkBuild {
     private void deleteBuild(String dir) {
         File build = new File(Utils.linkPath(dir, "build"));
         File dist = new File(Utils.linkPath(dir, "dist"));
-        if (build.exists())
+        if (build.exists()) {
             deleteDir(build);
-        if (dist.exists())
+        }
+        if (dist.exists()) {
             deleteDir(dist);
+        }
     }
 
     /**
@@ -117,8 +123,9 @@ public class ApkBuild {
         if (file.isDirectory()) {
             File[] fileList = file.listFiles();
             if (fileList != null) {
-                for (File f : fileList)
+                for (File f : fileList) {
                     deleteDir(f);
+                }
             }
         }
         file.delete();

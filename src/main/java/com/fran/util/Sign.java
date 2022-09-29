@@ -3,12 +3,17 @@ package com.fran.util;
 import java.io.File;
 import java.net.MalformedURLException;
 
+/**
+ * @author 程良明
+ * * 说明:签名
+ **/
 public class Sign {
 
     public Sign(String dir, String inApk) {
         String[] info = findSignInfo(new File(dir), "key.keystore");
-        if (info == null)
+        if (info == null) {
             throw new RuntimeException(dir + " 无签名文件！");
+        }
         String name = new File(dir).getName();
         String out = Utils.linkPath(dir, name + "_sign.apk");
 
@@ -35,8 +40,9 @@ public class Sign {
         }
         if (f != null) {
             File passf = new File(dir, "password.ini");
-            if (!passf.exists() || passf.isDirectory())
+            if (!passf.exists() || passf.isDirectory()) {
                 throw new RuntimeException("password.ini NOT FOUND!");
+            }
             String[] passinfo = Utils.read(passf).split(";");
             // keystore file path, password
             return new String[]{f.getAbsolutePath(), passinfo[0], passinfo[1]};

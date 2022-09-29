@@ -7,8 +7,9 @@ import java.io.File;
 
 
 /**
- * 生成签名文件
- */
+ * @author 程良明
+ * * 说明:生成签名文件
+ **/
 class KeyTool {
     KeyTool(String dir) {
         String alias = "key";

@@ -6,6 +6,10 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Scanner;
 
+/**
+ * @author 程良明
+ * * 说明:工具
+ **/
 public class Utils {
     /**
      * 日志
