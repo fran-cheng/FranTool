@@ -17,7 +17,8 @@ repositories {
 }
 
 dependencies {
-
+    implementation 'org.yaml:snakeyaml:1.29:android'
+    implementation 'xpp3:xpp3:1.1.4c'
 }
 
 
@@ -56,7 +57,7 @@ task copy2ToolJar(type: Copy, dependsOn: [copyJar, copyLibs]) {
 }
 
 task clearBuild(type: Delete) {
-    delete 'build', 'out',"tool/FranTool.jar"
+    delete 'build', 'out', "tool/FranTool.jar"
 }
 
 task assembleRelease(dependsOn: [clearBuild, jar, copy2ToolJar])
