@@ -2,6 +2,7 @@ package com.fran.merge;
 
 import com.fran.util.Utils;
 
+import org.dom4j.Attribute;
 import org.dom4j.Document;
 import org.dom4j.DocumentException;
 import org.dom4j.Element;
@@ -75,13 +76,65 @@ public class MergeBase {
     private void commonMergeManiFestXml() {
         Element workManifestElement = mWorkDocument.getRootElement();
         Element pluginManifestElement = mPluginDocument.getRootElement();
-//        合并权限
-        mergeElement(workManifestElement, pluginManifestElement, "uses-permission");
-//        合并feature
-        mergeElement(workManifestElement, pluginManifestElement, "uses-feature");
-//        处理queries
-        mergeQueriesElement(workManifestElement, pluginManifestElement);
-//        处理application
+
+        //        合并2个xml文件
+        workManifestElement.appendContent(pluginManifestElement);
+//        去除Manifest重复
+        processElementToSole(workManifestElement, true);
+//        去除Application重复
+//        processElementToSole(workManifestElement.element("application"), true);
+        // TODO: 2022/10/10 插件需要替换部分name为当前包名，待处理
+    }
+
+    /**
+     * 处理合并后的元素，确保唯一值
+     *
+     * @param workElement      标签元素
+     * @param isProcessContent 是否处理标签子元素的内容
+     */
+    private void processElementToSole(Element workElement, boolean isProcessContent) {
+        Utils.log("处理标签: " + workElement.getName());
+        List<String> nameList = new ArrayList<>();
+        List<String> noneRootElementList = new ArrayList<>();
+        for (Element element : workElement.elements()) {
+            String name = element.getName();
+            String value = element.attributeValue("name");
+            if (!element.hasContent() || !isProcessContent) {
+
+                if (value == null) {
+                    StringBuilder builder = new StringBuilder();
+                    for (Attribute attribute : element.attributes()) {
+                        builder.append(attribute.getName()).append(attribute.getValue());
+                    }
+                    value = builder.toString();
+                    Utils.log("注意: 因为name为null，所以判断attribute ==>" + element.getName());
+                }
+
+                value = name + ":" + value;
+
+                if (nameList.contains(value)) {
+                    Utils.log("去除重复元素： " + value);
+                    workElement.remove(element);
+                } else {
+                    nameList.add(value);
+                }
+            } else if (!noneRootElementList.contains(name)) {
+                noneRootElementList.add(name);
+            }
+        }
+
+        if (isProcessContent) {
+            //        处理需要合并的标签
+            for (String noneName : noneRootElementList) {
+                Utils.log(String.format("合并%s,使其唯一", noneName));
+                mergeElementFromName(workElement, noneName);
+                processElementToSole(workElement.element(noneName), false);
+            }
+        }
+
+    }
+
+    private void processApplication(Element workManifestElement, Element pluginManifestElement) {
         Element workApplicationElement = workManifestElement.element("application");
         Element pluginApplicationElement = pluginManifestElement.element("application");
 
@@ -109,13 +162,6 @@ public class MergeBase {
                 pluginApplicationElement.remove(element);
             }
         }
-
-
-//        合并2个xml文件
-        workManifestElement.appendContent(pluginManifestElement);
-//        合并成一个
-        processElementToSole(workManifestElement, "queries");
-        // TODO: 2022/10/10 插件需要替换部分name为当前包名，待处理
     }
 
     /**
@@ -125,8 +171,8 @@ public class MergeBase {
      * @param pluginManifestElement 插件manifest元素
      */
     private void mergeQueriesElement(Element workManifestElement, Element pluginManifestElement) {
-        processElementToSole(workManifestElement, "queries");
-        processElementToSole(pluginManifestElement, "queries");
+        mergeElementFromName(workManifestElement, "queries");
+        mergeElementFromName(pluginManifestElement, "queries");
         mergeElement(workManifestElement.element("queries"), pluginManifestElement.element("queries"), "package");
     }
 
@@ -135,7 +181,7 @@ public class MergeBase {
      *
      * @param manifestElement Element
      */
-    private void processElementToSole(Element manifestElement, String name) {
+    private void mergeElementFromName(Element manifestElement, String name) {
         Element tempElement = null;
         for (Element element : manifestElement.elements(name)) {
             if (tempElement != null && element != tempElement) {
