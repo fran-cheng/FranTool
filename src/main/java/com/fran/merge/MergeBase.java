@@ -23,10 +23,12 @@ import java.util.Map;
  * * 说明:合并2个apk
  **/
 public class MergeBase {
+    protected String mWorkPackName;
+    protected String mPluginPackName;
     private final String mWorkPath;
     private final String mPluginPath;
-    private Document mWorkDocument;
-    private Document mPluginDocument;
+    protected Document mWorkDocument;
+    protected Document mPluginDocument;
 
     public static void main(String[] args) {
         MergeBase mergeBase = new MergeBase("F:\\Work\\Test\\A", "F:\\Work\\Test\\B");
@@ -42,6 +44,8 @@ public class MergeBase {
             SAXReader saxReader = new SAXReader();
             mWorkDocument = saxReader.read(workManifestPath);
             mPluginDocument = saxReader.read(pluginManifestPath);
+            mWorkPackName = mWorkDocument.getRootElement().attributeValue("package");
+            mPluginPackName = mPluginDocument.getRootElement().attributeValue("package");
         } catch (DocumentException e) {
             e.printStackTrace();
         }
@@ -76,14 +80,35 @@ public class MergeBase {
     private void commonMergeManiFestXml() {
         Element workManifestElement = mWorkDocument.getRootElement();
         Element pluginManifestElement = mPluginDocument.getRootElement();
-
+//      处理插件包名
+        processPluginPackageName(pluginManifestElement);
         //        合并2个xml文件
         workManifestElement.appendContent(pluginManifestElement);
 //        去除Manifest重复
         processElementToSole(workManifestElement, true);
-//        去除Application重复
-//        processElementToSole(workManifestElement.element("application"), true);
-        // TODO: 2022/10/10 插件需要替换部分name为当前包名，待处理
+
+    }
+
+    /**
+     * 将插件的packageName替换成work的packageName
+     *
+     * @param pluginManifestElement Element
+     */
+    private void processPluginPackageName(Element pluginManifestElement) {
+        for (Element element : pluginManifestElement.elements()) {
+            if (element.hasContent()) {
+                processPluginPackageName(element);
+            } else {
+                for (Attribute attribute : element.attributes()) {
+                    String value = attribute.getValue();
+                    if (value.contains(mPluginPackName)) {
+                        Utils.log(String.format("标签%s,value:%s,将%s,替换成%s", element.getName(), value, mPluginPackName, mWorkPackName));
+                        attribute.setValue(value.replace(mPluginPackName, mWorkPackName));
+                    }
+                }
+            }
+
+        }
     }
 
     /**
