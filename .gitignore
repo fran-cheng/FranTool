@@ -4,3 +4,8 @@
 /.gradle/
 /build/
 /out/production/
+gradlew
+gradlew.bat
+local.properties
+gradle/wrapper/gradle-wrapper.jar
+gradle/wrapper/gradle-wrapper.properties
