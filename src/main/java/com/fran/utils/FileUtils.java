@@ -1,5 +1,7 @@
 package com.fran.utils;
 
+import com.fran.util.Utils;
+
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
@@ -298,7 +300,7 @@ public class FileUtils {
         return resSource;
     }
 
-    private String getHexString(String line) {
+    private static String getHexString(String line) {
         String resValue = null;
         if (line.contains(KEY_HEX)) {
             int startIndex = line.indexOf(KEY_HEX);
@@ -313,8 +315,9 @@ public class FileUtils {
     }
 
 
-    private String amendLine(String line, String sourceString, String targetString) {
+    private static String amendLine(String line, String sourceString, String targetString) {
         if (sourceString != null && targetString != null) {
+            Utils.log(String.format("用:%s ; 替换: %s ",targetString,sourceString));
             line = line.replace(sourceString, targetString);
         }
         return line;
@@ -408,18 +411,64 @@ public class FileUtils {
      * @param outPutFile 输出
      */
     public static void copyOperation(File tempFile, File outPutFile) {
-        try (FileReader fileReader = new FileReader(tempFile);
-             FileWriter fileWriter = new FileWriter(outPutFile)) {
-            char[] chars = new char[1024];
-            int length;
-            while ((length = fileReader.read(chars)) != -1) {
-                fileWriter.write(chars, 0, length);
-            }
-            fileWriter.flush();
 
-        } catch (IOException e) {
-            e.printStackTrace();
+        if (tempFile.isDirectory()) {
+            outPutFile.mkdirs();
+            for (File file : Objects.requireNonNull(tempFile.listFiles())) {
+                copyOperation(file, new File(outPutFile, file.getName()));
+            }
+        } else {
+            try (FileReader fileReader = new FileReader(tempFile);
+                 FileWriter fileWriter = new FileWriter(outPutFile)) {
+                char[] chars = new char[1024];
+                int length;
+                while ((length = fileReader.read(chars)) != -1) {
+                    fileWriter.write(chars, 0, length);
+                }
+                fileWriter.flush();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
         }
+
+    }
+
+    /**
+     * 拷贝的具体操作
+     * 存在的文件重新写入替换
+     *
+     * @param tempFile   输入
+     * @param outPutFile 输出
+     */
+    public static void copySmaliOperation(File tempFile, File outPutFile, Map<String, String> map) {
+        String path = outPutFile.getPath();
+        path = path.substring(path.indexOf("smali"));
+        if (tempFile.isDirectory()) {
+            outPutFile.mkdirs();
+            for (File file : Objects.requireNonNull(tempFile.listFiles())) {
+                copySmaliOperation(file, new File(outPutFile, file.getName()),map);
+            }
+        } else if (tempFile.getName().startsWith("R$")) {
+            Utils.log("合并smali文件： " + path);
+        } else {
+            Utils.log("覆盖smali文件： " + path);
+            try (BufferedReader buffReader = new BufferedReader(new FileReader(tempFile));
+                 BufferedWriter buffWriter = new BufferedWriter(new FileWriter(outPutFile))) {
+                String line;
+                while ((line = buffReader.readLine()) != null) {
+                    if (line.contains(KEY_HEX)) {
+                        String resValue = getHexString(line);
+                        String targetValue = map.get(resValue);
+                        line = amendLine(line, resValue, targetValue);
+                    }
+                    buffWriter.write(line);
+                }
+                buffWriter.flush();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+
     }
 
     /**

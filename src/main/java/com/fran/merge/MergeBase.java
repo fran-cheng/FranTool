@@ -7,7 +7,6 @@ import org.dom4j.Attribute;
 import org.dom4j.Document;
 import org.dom4j.DocumentException;
 import org.dom4j.Element;
-import org.dom4j.Node;
 import org.dom4j.io.OutputFormat;
 import org.dom4j.io.SAXReader;
 import org.dom4j.io.XMLWriter;
@@ -17,12 +16,12 @@ import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.Arrays;
-import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 
 /**
  * @author 程良明
@@ -40,6 +39,11 @@ public class MergeBase {
     private final String mPluginPath;
     protected Document mWorkDocument;
     protected Document mPluginDocument;
+    private Map<String, Map<String, Integer>> mMergePublicMap;
+    /**
+     * 插件修改过后的新旧id映射
+     */
+    private Map<String, String> mPluginIdMap;
 
     public static void main(String[] args) {
         MergeBase mergeBase = new MergeBase("F:\\Work\\Test\\A", "F:\\Work\\Test\\B");
@@ -106,8 +110,15 @@ public class MergeBase {
                 default:
                     if (fileName.startsWith("smali")) {
                         // TODO: 2022/10/11  处理smali
+                        // TODO: 2022/10/12 首先需要收集 合并后的xml文件 上面res有，接着，需要收集smali里面R文件的位置,  然后需要遍历文件，替换资源id
+//                        依据 mPublicMap， 来纠正插件的Rid
+//                        依据 mPluginIdMap， 来纠正插件的Rid
+                        // TODO: 2022/10/12 R文件合并， 非R文件覆盖
+//                        throw  new RuntimeException("clm");
+                        FileUtils.copySmaliOperation(file, new File(file.getPath().replace(mPluginPath, mWorkPath)), mPluginIdMap);
                     } else {
-                        // TODO: 2022/10/11 直接copy
+                        Utils.log("替换" + fileName);
+                        FileUtils.copyOperation(file, new File(file.getPath().replace(mPluginPath, mWorkPath)));
                     }
                     break;
             }
@@ -142,7 +153,7 @@ public class MergeBase {
                         Utils.log("合并: " + xmlFile.getName());
                         if ("public".equals(fileType)) {
                             //  public合并
-                            mergePublicXml(saxReader, xmlFile, workXmlFile);
+                            mMergePublicMap = mergePublicXml(saxReader, xmlFile, workXmlFile);
                             continue;
                         }
                         mergeValueXml(saxReader, xmlFile, workXmlFile);
@@ -199,23 +210,29 @@ public class MergeBase {
         }
     }
 
-    private void mergePublicXml(SAXReader saxReader, File xmlFile, File workXmlFile) {
+    /**
+     * 合并public.xml文件
+     *
+     * @param saxReader   SAXReader
+     * @param xmlFile     pluginPublicXmlFile
+     * @param workXmlFile workPublicXmlFile
+     * @return
+     */
+    private Map<String, Map<String, Integer>> mergePublicXml(SAXReader saxReader, File xmlFile, File workXmlFile) {
+        Map<String, String> oldNewIdMap = new HashMap<>(1024);
+        Map<String, Map<String, Integer>> workMapTypeName = new HashMap<>(1024);
         try {
             Document pluginXml = saxReader.read(xmlFile);
             Document workXml = saxReader.read(workXmlFile);
             Element pluginRootElement = pluginXml.getRootElement();
             Element workRootElement = workXml.getRootElement();
-            Map<String, Map<String, Integer>> workMapTypeName = new HashMap<>(1024);
             Map<String, Integer> typeMaxIdMap = new HashMap<>(16);
             for (Element element : workRootElement.elements()) {
                 String type = element.attributeValue("type");
                 String name = element.attributeValue("name");
                 String idString = element.attributeValue("id");
                 int id = Integer.parseInt(idString.substring(2), 16);
-                Map<String, Integer> nameIdMap = workMapTypeName.get(type);
-                if (nameIdMap == null) {
-                    nameIdMap = new HashMap<>(1024);
-                }
+                Map<String, Integer> nameIdMap = workMapTypeName.getOrDefault(type, new HashMap<>(1024));
                 nameIdMap.put(name, id);
                 workMapTypeName.put(type, nameIdMap);
                 if (typeMaxIdMap.getOrDefault(type, 0) < id) {
@@ -236,9 +253,12 @@ public class MergeBase {
             for (Element element : pluginRootElement.elements()) {
                 String type = element.attributeValue("type");
                 String name = element.attributeValue("name");
+                String idStr = element.attributeValue("id");
                 if (workMapTypeName.containsKey(type)) {
                     if (workMapTypeName.get(type).containsKey(name)) {
                         Utils.log("移除plugin name: " + name);
+                        String newId = "0x" + Integer.toHexString(workMapTypeName.get(type).get(name));
+                        oldNewIdMap.put(idStr, newId);
                         pluginRootElement.remove(element);
                     } else {
                         int maxId = typeMaxIdMap.get(type);
@@ -247,6 +267,10 @@ public class MergeBase {
                         element.attribute("id").setValue(value);
                         typeMaxIdMap.put(type, newId);
                         Utils.log(String.format("修改plugin name: %s ,id: 新值: %s", name, newId));
+                        Map<String, Integer> map = workMapTypeName.getOrDefault(type, new HashMap<>(1024));
+                        map.put(name, newId);
+                        workMapTypeName.put(type, map);
+                        oldNewIdMap.put(idStr, value);
                     }
                 } else {
 //                    类型不存在，需要更改所有的id
@@ -261,6 +285,10 @@ public class MergeBase {
                     typeMaxIdMap.put(type, id);
                     allTypeMaxId = id;
                     Utils.log(String.format("修改plugin name: %s ,id: 新值: %s", name, value));
+                    Map<String, Integer> map = workMapTypeName.getOrDefault(type, new HashMap<>(1024));
+                    map.put(name, id);
+                    workMapTypeName.put(type, map);
+                    oldNewIdMap.put(idStr, value);
                 }
             }
 //            合并xml
@@ -280,6 +308,9 @@ public class MergeBase {
             e.printStackTrace();
         }
 
+        mPluginIdMap = oldNewIdMap;
+
+        return workMapTypeName;
     }
 
     private void copyLibs(File workDir, File file) {
