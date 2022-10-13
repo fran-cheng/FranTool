@@ -1,7 +1,6 @@
 package com.fran.merge;
 
 import com.fran.util.Utils;
-import com.fran.utils.FileUtils;
 
 import org.dom4j.Attribute;
 import org.dom4j.Document;
@@ -11,7 +10,10 @@ import org.dom4j.io.OutputFormat;
 import org.dom4j.io.SAXReader;
 import org.dom4j.io.XMLWriter;
 
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
@@ -21,7 +23,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 
 /**
  * @author 程良明
@@ -115,10 +116,10 @@ public class MergeBase {
 //                        依据 mPluginIdMap， 来纠正插件的Rid
                         // TODO: 2022/10/12 R文件合并， 非R文件覆盖
 //                        throw  new RuntimeException("clm");
-                        FileUtils.copySmaliOperation(file, new File(file.getPath().replace(mPluginPath, mWorkPath)), mPluginIdMap);
+                        copySmaliOperation(file, new File(file.getPath().replace(mPluginPath, mWorkPath)), mPluginIdMap);
                     } else {
                         Utils.log("替换" + fileName);
-                        FileUtils.copyOperation(file, new File(file.getPath().replace(mPluginPath, mWorkPath)));
+                        copyOperation(file, new File(file.getPath().replace(mPluginPath, mWorkPath)));
                     }
                     break;
             }
@@ -138,7 +139,7 @@ public class MergeBase {
             Utils.log("替换Res文件");
             for (File tempFile : copyFiles) {
                 for (File xmlFile : Objects.requireNonNull(tempFile.listFiles())) {
-                    FileUtils.copyOperation(xmlFile, new File(xmlFile.getPath().replace(mPluginPath, mWorkPath)));
+                    copyOperation(xmlFile, new File(xmlFile.getPath().replace(mPluginPath, mWorkPath)));
                 }
             }
         }
@@ -158,7 +159,7 @@ public class MergeBase {
                         }
                         mergeValueXml(saxReader, xmlFile, workXmlFile);
                     } else {
-                        FileUtils.copyOperation(xmlFile, new File(xmlFile.getPath().replace(mPluginPath, mWorkPath)));
+                        copyOperation(xmlFile, new File(xmlFile.getPath().replace(mPluginPath, mWorkPath)));
                     }
 
                 }
@@ -318,7 +319,7 @@ public class MergeBase {
 
         if (workLibFileName == null || workLibFileName.length == 0) {
             for (File tempFile : Objects.requireNonNull(file.listFiles())) {
-                FileUtils.copyOperation(tempFile, new File(tempFile.getPath().replace(mPluginPath, mWorkPath)));
+                copyOperation(tempFile, new File(tempFile.getPath().replace(mPluginPath, mWorkPath)));
             }
         } else {
             List<String> list = Arrays.asList(workLibFileName);
@@ -326,7 +327,7 @@ public class MergeBase {
             if (pluginLibApiFiles != null) {
                 for (File tempFile : pluginLibApiFiles) {
                     Utils.log("拷贝plugin的lib");
-                    FileUtils.copyOperation(tempFile, new File(tempFile.getPath().replace(mPluginPath, mWorkPath)));
+                    copyOperation(tempFile, new File(tempFile.getPath().replace(mPluginPath, mWorkPath)));
                 }
             }
         }
@@ -458,5 +459,101 @@ public class MergeBase {
             }
             tempElement = element;
         }
+    }
+
+
+    /**
+     * 拷贝的具体操作
+     * 存在的文件重新写入替换
+     *
+     * @param tempFile   输入
+     * @param outPutFile 输出
+     */
+    private void copyOperation(File tempFile, File outPutFile) {
+
+        if (tempFile.isDirectory()) {
+            outPutFile.mkdirs();
+            for (File file : Objects.requireNonNull(tempFile.listFiles())) {
+                copyOperation(file, new File(outPutFile, file.getName()));
+            }
+        } else {
+            try (FileReader fileReader = new FileReader(tempFile);
+                 FileWriter fileWriter = new FileWriter(outPutFile)) {
+                char[] chars = new char[1024];
+                int length;
+                while ((length = fileReader.read(chars)) != -1) {
+                    fileWriter.write(chars, 0, length);
+                }
+                fileWriter.flush();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    /**
+     * 拷贝的具体操作
+     * 存在的文件重新写入替换
+     *
+     * @param tempFile   输入
+     * @param outPutFile 输出
+     */
+    private void copySmaliOperation(File tempFile, File outPutFile, Map<String, String> map) {
+        String path = outPutFile.getPath();
+        path = path.substring(path.indexOf("smali"));
+        if (tempFile.isDirectory()) {
+            outPutFile.mkdirs();
+            for (File file : Objects.requireNonNull(tempFile.listFiles())) {
+                copySmaliOperation(file, new File(outPutFile, file.getName()), map);
+            }
+        } else {
+            String fileName = tempFile.getName();
+            if (fileName.startsWith("R$")) {
+                if (outPutFile.exists()) {
+                    Utils.log("合并smali文件： " + path);
+                    // TODO: 2022/10/13 写合并逻辑
+                    throw new RuntimeException("还没有写相关合并逻辑");
+                }
+            } else {
+                Utils.log("覆盖smali文件： " + path);
+            }
+            try (BufferedReader buffReader = new BufferedReader(new FileReader(tempFile));
+                 BufferedWriter buffWriter = new BufferedWriter(new FileWriter(outPutFile))) {
+                String line;
+                while ((line = buffReader.readLine()) != null) {
+                    String resValue = getHexString(line);
+                    if (resValue != null) {
+                        String targetValue = map.get(resValue);
+                        line = amendLine(line, resValue, targetValue);
+                    }
+                    buffWriter.write(line);
+                }
+                buffWriter.flush();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    }
+
+    private String getHexString(String line) {
+        String resValue = null;
+        if (line.contains("0x7f")) {
+            int startIndex = line.indexOf("0x7f");
+            try {
+                resValue = line.substring(startIndex, startIndex + 10);
+            } catch (Exception ignored) {
+                resValue = null;
+            }
+        }
+
+        return resValue;
+    }
+
+    private String amendLine(String line, String sourceString, String targetString) {
+        if (sourceString != null && targetString != null) {
+            Utils.log(String.format("用:%s ; 替换: %s ", targetString, sourceString));
+            line = line.replace(sourceString, targetString);
+        }
+        return line;
     }
 }

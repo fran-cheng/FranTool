@@ -287,7 +287,7 @@ public class FileUtils {
      * @param line R文件的1行
      * @return string[0]是resName string[1]是resValue
      */
-    private static String[] parseRFileLine(String line) {
+    private String[] parseRFileLine(String line) {
         String[] resSource = null;
         if (line.startsWith(".field public static final")) {
             String[] strings = line.split(KEY_COLON);
@@ -300,7 +300,7 @@ public class FileUtils {
         return resSource;
     }
 
-    private static String getHexString(String line) {
+    private String getHexString(String line) {
         String resValue = null;
         if (line.contains(KEY_HEX)) {
             int startIndex = line.indexOf(KEY_HEX);
@@ -315,7 +315,7 @@ public class FileUtils {
     }
 
 
-    private static String amendLine(String line, String sourceString, String targetString) {
+    private String amendLine(String line, String sourceString, String targetString) {
         if (sourceString != null && targetString != null) {
             Utils.log(String.format("用:%s ; 替换: %s ", targetString, sourceString));
             line = line.replace(sourceString, targetString);
@@ -410,7 +410,7 @@ public class FileUtils {
      * @param tempFile   输入
      * @param outPutFile 输出
      */
-    public static void copyOperation(File tempFile, File outPutFile) {
+    private void copyOperation(File tempFile, File outPutFile) {
 
         if (tempFile.isDirectory()) {
             outPutFile.mkdirs();
@@ -433,50 +433,6 @@ public class FileUtils {
 
     }
 
-    /**
-     * 拷贝的具体操作
-     * 存在的文件重新写入替换
-     *
-     * @param tempFile   输入
-     * @param outPutFile 输出
-     */
-    public static void copySmaliOperation(File tempFile, File outPutFile, Map<String, String> map) {
-        String path = outPutFile.getPath();
-        path = path.substring(path.indexOf("smali"));
-        if (tempFile.isDirectory()) {
-            outPutFile.mkdirs();
-            for (File file : Objects.requireNonNull(tempFile.listFiles())) {
-                copySmaliOperation(file, new File(outPutFile, file.getName()), map);
-            }
-        } else {
-            String fileName = tempFile.getName();
-            if (fileName.startsWith("R$")) {
-                if (outPutFile.exists()) {
-                    Utils.log("合并smali文件： " + path);
-                    // TODO: 2022/10/13 写合并逻辑 
-                    throw new RuntimeException("还没有写相关合并逻辑");
-                }
-            } else {
-                Utils.log("覆盖smali文件： " + path);
-            }
-            try (BufferedReader buffReader = new BufferedReader(new FileReader(tempFile));
-                 BufferedWriter buffWriter = new BufferedWriter(new FileWriter(outPutFile))) {
-                String line;
-                while ((line = buffReader.readLine()) != null) {
-                    if (line.contains(KEY_HEX)) {
-                        String resValue = getHexString(line);
-                        String targetValue = map.get(resValue);
-                        line = amendLine(line, resValue, targetValue);
-                    }
-                    buffWriter.write(line);
-                }
-                buffWriter.flush();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        }
-
-    }
 
     /**
      * 替换修改后的文件为原来文件
