@@ -287,7 +287,7 @@ public class FileUtils {
      * @param line R文件的1行
      * @return string[0]是resName string[1]是resValue
      */
-    private String[] parseRFileLine(String line) {
+    private static String[] parseRFileLine(String line) {
         String[] resSource = null;
         if (line.startsWith(".field public static final")) {
             String[] strings = line.split(KEY_COLON);
@@ -317,7 +317,7 @@ public class FileUtils {
 
     private static String amendLine(String line, String sourceString, String targetString) {
         if (sourceString != null && targetString != null) {
-            Utils.log(String.format("用:%s ; 替换: %s ",targetString,sourceString));
+            Utils.log(String.format("用:%s ; 替换: %s ", targetString, sourceString));
             line = line.replace(sourceString, targetString);
         }
         return line;
@@ -446,12 +446,19 @@ public class FileUtils {
         if (tempFile.isDirectory()) {
             outPutFile.mkdirs();
             for (File file : Objects.requireNonNull(tempFile.listFiles())) {
-                copySmaliOperation(file, new File(outPutFile, file.getName()),map);
+                copySmaliOperation(file, new File(outPutFile, file.getName()), map);
             }
-        } else if (tempFile.getName().startsWith("R$")) {
-            Utils.log("合并smali文件： " + path);
         } else {
-            Utils.log("覆盖smali文件： " + path);
+            String fileName = tempFile.getName();
+            if (fileName.startsWith("R$")) {
+                if (outPutFile.exists()) {
+                    Utils.log("合并smali文件： " + path);
+                    // TODO: 2022/10/13 写合并逻辑 
+                    throw new RuntimeException("还没有写相关合并逻辑");
+                }
+            } else {
+                Utils.log("覆盖smali文件： " + path);
+            }
             try (BufferedReader buffReader = new BufferedReader(new FileReader(tempFile));
                  BufferedWriter buffWriter = new BufferedWriter(new FileWriter(outPutFile))) {
                 String line;
