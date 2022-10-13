@@ -494,6 +494,7 @@ public class MergeBase {
     /**
      * 拷贝的具体操作
      * 存在的文件重新写入替换
+     * 其实直接替换也可以。。。
      *
      * @param tempFile   输入
      * @param outPutFile 输出
@@ -508,15 +509,92 @@ public class MergeBase {
             }
         } else {
             String fileName = tempFile.getName();
-            if (fileName.startsWith("R$")) {
-                if (outPutFile.exists()) {
-                    Utils.log("合并smali文件： " + path);
-                    // TODO: 2022/10/13 写合并逻辑
-                    throw new RuntimeException("还没有写相关合并逻辑");
+
+            if (fileName.startsWith("R$") && outPutFile.exists()) {
+                boolean isStyleable = path.contains("styleable");
+                StringBuilder outputString = new StringBuilder();
+                StringBuilder styleableConstructor = new StringBuilder();
+                try (BufferedReader bufferedReader = new BufferedReader(new FileReader(outPutFile))) {
+                    String line;
+
+                    boolean isStartConstructor = false;
+                    while ((line = bufferedReader.readLine()) != null) {
+                        if (line.contains(".field public static final")) {
+                            outputString.append(line).append("\r\n").append("\r\n");
+                        }
+                        if (isStyleable) {
+                            if (line.contains("constructor <clinit>")) {
+                                isStartConstructor = true;
+                            }
+                            if (isStartConstructor) {
+                                if (line.contains(".end method")) {
+                                    isStartConstructor = false;
+                                }
+                                styleableConstructor.append(line);
+                            }
+                        }
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
-            } else {
-                Utils.log("覆盖smali文件： " + path);
+                Utils.log("合并smali文件： " + path);
+
+                try (BufferedReader buffReader = new BufferedReader(new FileReader(tempFile));
+                     BufferedWriter buffWriter = new BufferedWriter(new FileWriter(outPutFile))) {
+                    String line;
+                    String outputOriginFields = outputString.toString();
+                    boolean writeFields = false;
+                    boolean isProcessConstructor = false;
+                    while ((line = buffReader.readLine()) != null) {
+//                        合并前的数据
+                        if (!writeFields && line.contains(".field public static final")) {
+                            buffWriter.write(outputOriginFields);
+                            writeFields = true;
+                        }
+                        if (isStyleable) {
+                            // TODO: 2022/10/13 收集  .method public static constructor  里面的数组
+                            if (line.contains("constructor <clinit>")) {
+                                isProcessConstructor = true;
+                            }
+                            StringBuilder chunkStr = new StringBuilder();
+                            if (isProcessConstructor) {
+                                // TODO: 2022/10/13  对styleableConstructor 进行修改
+                                chunkStr.append(line);
+                                while (!line.contains("sput-object")) {
+                                    chunkStr.append(line);
+                                    line = buffReader.readLine();
+                                }
+                                String name = line.substring(line.indexOf(";->") + 3, line.indexOf(":[I"));
+                                chunkStr.append(line);
+
+                                if (line.contains(".end method")) {
+                                    isProcessConstructor = false;
+                                }
+                                continue;
+                            }
+                        }
+
+                        String resValue = getHexString(line);
+                        if (resValue != null) {
+                            String targetValue = map.get(resValue);
+                            line = amendLine(line, resValue, targetValue);
+                            if (outputOriginFields.contains(targetValue)) {
+                                Utils.log("忽略重复的line: " + line);
+                                continue;
+                            }
+                        }
+                        buffWriter.write(line + "\r\n");
+
+                    }
+                    buffWriter.flush();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+
+                return;
             }
+
+            Utils.log("覆盖smali文件： " + path);
             try (BufferedReader buffReader = new BufferedReader(new FileReader(tempFile));
                  BufferedWriter buffWriter = new BufferedWriter(new FileWriter(outPutFile))) {
                 String line;
@@ -526,7 +604,7 @@ public class MergeBase {
                         String targetValue = map.get(resValue);
                         line = amendLine(line, resValue, targetValue);
                     }
-                    buffWriter.write(line);
+                    buffWriter.write(line + "\r\n");
                 }
                 buffWriter.flush();
             } catch (IOException e) {
@@ -551,8 +629,10 @@ public class MergeBase {
 
     private String amendLine(String line, String sourceString, String targetString) {
         if (sourceString != null && targetString != null) {
-            Utils.log(String.format("用:%s ; 替换: %s ", targetString, sourceString));
-            line = line.replace(sourceString, targetString);
+            if (!targetString.equals(sourceString)) {
+                Utils.log(String.format("用:%s ; 替换: %s ", targetString, sourceString));
+                line = line.replace(sourceString, targetString);
+            }
         }
         return line;
     }
