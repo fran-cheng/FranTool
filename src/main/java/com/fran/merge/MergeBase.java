@@ -33,21 +33,20 @@ import java.util.Objects;
  * 3、当处于文件替换的时候即由plugin替换work的对应文件
  **/
 public class MergeBase {
-    private String[] mCopyWhiteList = new String[]{"assets", "lib", "res", "smali"};
-    protected String mWorkPackName;
-    protected String mPluginPackName;
+    private final String[] mCopyWhiteList = new String[]{"assets", "lib", "res", "smali"};
     private final String mWorkPath;
     private final String mPluginPath;
     protected Document mWorkDocument;
     protected Document mPluginDocument;
-    private Map<String, Map<String, Integer>> mMergePublicMap;
     /**
      * 插件修改过后的新旧id映射
      */
     private Map<String, String> mPluginIdMap;
 
     public static void main(String[] args) {
-        MergeBase mergeBase = new MergeBase("F:\\Work\\Test\\A", "F:\\Work\\Test\\B");
+//        MergeBase mergeBase = new MergeBase("F:\\Work\\Test\\A", "F:\\Work\\Test\\B");
+//        MergeBase mergeBase = new MergeBase("F:\\Work\\2022-10\\mrscxqzf_test", "F:\\Work\\2022-10\\6.84.1SDK(Android)\\6.84.1SDK(加密)\\6.84.1SDK(加密)\\6.84.1SDK\\6.84.1\\X7_sdk_demo_6.84.1_20220513");
+        MergeBase mergeBase = new MergeBase("F:\\Work\\2022-10\\hcrmx_mi_1_1_8", "F:\\AndroidProject\\leaning\\TempActivity\\app\\build\\outputs\\apk\\release\\app-release-unsigned");
         mergeBase.merge();
     }
 
@@ -60,17 +59,7 @@ public class MergeBase {
     public MergeBase(String workPath, String pluginPath) {
         mWorkPath = workPath;
         mPluginPath = pluginPath;
-        String workManifestPath = Utils.linkPath(workPath, "AndroidManifest.xml");
-        String pluginManifestPath = Utils.linkPath(pluginPath, "AndroidManifest.xml");
-        try {
-            SAXReader saxReader = new SAXReader();
-            mWorkDocument = saxReader.read(workManifestPath);
-            mPluginDocument = saxReader.read(pluginManifestPath);
-            mWorkPackName = mWorkDocument.getRootElement().attributeValue("package");
-            mPluginPackName = mPluginDocument.getRootElement().attributeValue("package");
-        } catch (DocumentException e) {
-            e.printStackTrace();
-        }
+
     }
 
     /**
@@ -88,6 +77,17 @@ public class MergeBase {
         Utils.log("开始处理资源文件");
         File workDir = new File(mWorkPath);
         File pluginDir = new File(mPluginPath);
+        File[] workSmaliFiles = workDir.listFiles((file, s) -> {
+            String fileName = s.toLowerCase();
+            if (fileName.startsWith("smali")) {
+                return true;
+            }
+            return false;
+        });
+        if (workSmaliFiles.length > 9) {
+            // TODO: 2022/10/14 workSmaliFiles 得再按长度排序
+        }
+
         File[] files = pluginDir.listFiles((file, s) -> {
             String fileName = s.toLowerCase();
             for (String whiteName : mCopyWhiteList) {
@@ -110,13 +110,9 @@ public class MergeBase {
                     break;
                 default:
                     if (fileName.startsWith("smali")) {
-                        // TODO: 2022/10/11  处理smali
-                        // TODO: 2022/10/12 首先需要收集 合并后的xml文件 上面res有，接着，需要收集smali里面R文件的位置,  然后需要遍历文件，替换资源id
-//                        依据 mPublicMap， 来纠正插件的Rid
-//                        依据 mPluginIdMap， 来纠正插件的Rid
-                        // TODO: 2022/10/12 R文件合并， 非R文件覆盖
 //                        throw  new RuntimeException("clm");
-                        copySmaliOperation(file, new File(file.getPath().replace(mPluginPath, mWorkPath)), mPluginIdMap);
+                        // TODO: 2022/10/13 需要判断对应的smali文件在那个smali_class里面， 存在就替换文件， 不存在就替换到最新的？
+                        copySmaliOperation(file, new File(file.getPath().replace(mPluginPath, mWorkPath)), mPluginIdMap, workSmaliFiles);
                     } else {
                         Utils.log("替换" + fileName);
                         copyOperation(file, new File(file.getPath().replace(mPluginPath, mWorkPath)));
@@ -154,7 +150,7 @@ public class MergeBase {
                         Utils.log("合并: " + xmlFile.getName());
                         if ("public".equals(fileType)) {
                             //  public合并
-                            mMergePublicMap = mergePublicXml(saxReader, xmlFile, workXmlFile);
+                            mPluginIdMap = mergePublicXml(saxReader, xmlFile, workXmlFile);
                             continue;
                         }
                         mergeValueXml(saxReader, xmlFile, workXmlFile);
@@ -219,7 +215,7 @@ public class MergeBase {
      * @param workXmlFile workPublicXmlFile
      * @return
      */
-    private Map<String, Map<String, Integer>> mergePublicXml(SAXReader saxReader, File xmlFile, File workXmlFile) {
+    private Map<String, String> mergePublicXml(SAXReader saxReader, File xmlFile, File workXmlFile) {
         Map<String, String> oldNewIdMap = new HashMap<>(1024);
         Map<String, Map<String, Integer>> workMapTypeName = new HashMap<>(1024);
         try {
@@ -232,6 +228,7 @@ public class MergeBase {
                 String type = element.attributeValue("type");
                 String name = element.attributeValue("name");
                 String idString = element.attributeValue("id");
+
                 int id = Integer.parseInt(idString.substring(2), 16);
                 Map<String, Integer> nameIdMap = workMapTypeName.getOrDefault(type, new HashMap<>(1024));
                 nameIdMap.put(name, id);
@@ -257,7 +254,8 @@ public class MergeBase {
                 String idStr = element.attributeValue("id");
                 if (workMapTypeName.containsKey(type)) {
                     if (workMapTypeName.get(type).containsKey(name)) {
-                        Utils.log("移除plugin name: " + name);
+                        Utils.log("移除plugin name: " + name + " : " + workMapTypeName.get(type).get(name) + " : " + type);
+
                         String newId = "0x" + Integer.toHexString(workMapTypeName.get(type).get(name));
                         oldNewIdMap.put(idStr, newId);
                         pluginRootElement.remove(element);
@@ -309,9 +307,8 @@ public class MergeBase {
             e.printStackTrace();
         }
 
-        mPluginIdMap = oldNewIdMap;
 
-        return workMapTypeName;
+        return oldNewIdMap;
     }
 
     private void copyLibs(File workDir, File file) {
@@ -359,11 +356,24 @@ public class MergeBase {
      * 合并AndroidManiFestXml文件
      */
     private void mergeManiFestXml() {
+        String workManifestPath = Utils.linkPath(mWorkPath, "AndroidManifest.xml");
+        String pluginManifestPath = Utils.linkPath(mPluginPath, "AndroidManifest.xml");
+        String workPackName = "";
+        String pluginPackName = "";
+        try {
+            SAXReader saxReader = new SAXReader();
+            mWorkDocument = saxReader.read(workManifestPath);
+            mPluginDocument = saxReader.read(pluginManifestPath);
+            workPackName = mWorkDocument.getRootElement().attributeValue("package");
+            pluginPackName = mPluginDocument.getRootElement().attributeValue("package");
+        } catch (DocumentException e) {
+            e.printStackTrace();
+        }
         Utils.log("开始合并清单文件");
         Element workManifestElement = mWorkDocument.getRootElement();
         Element pluginManifestElement = mPluginDocument.getRootElement();
 //      处理插件包名
-        processPluginPackageName(pluginManifestElement);
+        processPluginPackageName(workPackName, pluginPackName, pluginManifestElement);
         //        合并2个xml文件
         workManifestElement.appendContent(pluginManifestElement);
 //        去除Manifest重复
@@ -378,17 +388,17 @@ public class MergeBase {
      *
      * @param pluginElement Element
      */
-    private void processPluginPackageName(Element pluginElement) {
+    private void processPluginPackageName(String workPackName, String pluginPackName, Element pluginElement) {
         Utils.log("处理插件标签: " + pluginElement.getName());
         for (Element element : pluginElement.elements()) {
             if (element.hasContent()) {
-                processPluginPackageName(element);
+                processPluginPackageName(workPackName, pluginPackName, element);
             } else {
                 for (Attribute attribute : element.attributes()) {
                     String value = attribute.getValue();
-                    if (value.contains(mPluginPackName)) {
-                        Utils.log(String.format("插件标签%s,value:%s,将%s,替换成%s", element.getName(), value, mPluginPackName, mWorkPackName));
-                        attribute.setValue(value.replace(mPluginPackName, mWorkPackName));
+                    if (value.contains(pluginPackName)) {
+                        Utils.log(String.format("插件标签%s,value:%s,将%s,替换成%s", element.getName(), value, pluginPackName, workPackName));
+                        attribute.setValue(value.replace(pluginPackName, workPackName));
                     }
                 }
             }
@@ -495,20 +505,41 @@ public class MergeBase {
      * 拷贝的具体操作
      * 存在的文件重新写入替换
      * 其实直接替换也可以。。。
+     * 替换顺序:由上到下， 先smali的具体文件，到具体文件的父母，存在就替换，都不存在就copy到最后一个smali文件夹
      *
      * @param tempFile   输入
      * @param outPutFile 输出
      */
-    private void copySmaliOperation(File tempFile, File outPutFile, Map<String, String> map) {
+    private void copySmaliOperation(File tempFile, File outPutFile, Map<String, String> map, File[] workSmaliFile) {
         String path = outPutFile.getPath();
         path = path.substring(path.indexOf("smali"));
         if (tempFile.isDirectory()) {
-            outPutFile.mkdirs();
             for (File file : Objects.requireNonNull(tempFile.listFiles())) {
-                copySmaliOperation(file, new File(outPutFile, file.getName()), map);
+                copySmaliOperation(file, new File(outPutFile, file.getName()), map, workSmaliFile);
             }
         } else {
-            Utils.log("覆盖smali文件： " + path);
+            String outPath = path.substring(path.indexOf(File.separator));
+            for (int i = 0; i < workSmaliFile.length; i++) {
+                File exitFile = new File(workSmaliFile[i], outPath);
+                if (exitFile.exists() || exitFile.getParentFile().exists()) {
+                    outPutFile = exitFile;
+                    break;
+                }
+                if (i == workSmaliFile.length - 1) {
+                    outPutFile = exitFile;
+                }
+            }
+
+
+            outPutFile.getParentFile().mkdirs();
+            String outPutFilePath = outPutFile.getPath();
+            if (!outPutFilePath.contains("R$")) {
+//                Utils.log("不处理非R文件");
+                return;
+            }
+            outPutFilePath = outPutFilePath.substring(outPutFilePath.indexOf("smali"));
+            Utils.log(String.format("从%s替换%s", path, outPutFilePath));
+
             try (BufferedReader buffReader = new BufferedReader(new FileReader(tempFile));
                  BufferedWriter buffWriter = new BufferedWriter(new FileWriter(outPutFile))) {
                 String line;
