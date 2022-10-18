@@ -27,6 +27,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.stream.Collectors;
 
 /**
  * @author 程良明
@@ -91,7 +92,8 @@ public abstract class MergeBase {
         });
 
         if (workSmaliFiles != null && workSmaliFiles.length > 9) {
-            workSmaliFiles = (File[]) Arrays.stream(workSmaliFiles).sorted(Comparator.comparingInt(file -> file.getName().length())).toArray();
+            workSmaliFiles = Arrays.stream(workSmaliFiles).sorted(Comparator.comparingInt(file -> file.getName().length())).collect(Collectors.toList()).toArray(File[]::new);
+
         }
 
         File[] needProcessFiles = pluginDir.listFiles((file, s) -> {
