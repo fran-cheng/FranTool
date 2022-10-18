@@ -14,12 +14,14 @@ import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
+import java.io.ByteArrayOutputStream;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -334,7 +336,7 @@ public abstract class MergeBase {
     private void writeXmlFile(String outPutPath, Document document) {
         Utils.log("写入: " + outPutPath);
         XMLWriter writer = null;
-        try (FileWriter fileWriter = new FileWriter(outPutPath)) {
+        try (BufferedWriter fileWriter = new BufferedWriter(new FileWriter(outPutPath))) {
             writer = new XMLWriter(fileWriter, OutputFormat.createPrettyPrint());
             writer.write(document);
         } catch (IOException e) {
