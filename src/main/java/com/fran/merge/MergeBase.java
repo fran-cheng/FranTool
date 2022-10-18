@@ -45,7 +45,7 @@ public abstract class MergeBase {
     public static void main(String[] args) {
         MergeBase mergeBase = new MergeBase("F:\\Work\\2022-10\\hcrmx_mi_1_1_8", "F:\\AndroidProject\\leaning\\TempActivity\\app\\build\\outputs\\apk\\release\\app-release-unsigned") {
             @Override
-            protected void processManiFestXMl(Document workDocument) {
+            protected void processManiFestXml(Document workDocument) {
 
             }
         };
@@ -119,7 +119,7 @@ public abstract class MergeBase {
                         if (fileName.startsWith("smali")) {
                             copySmaliOperation(file, new File(file.getPath().replace(pluginPath, workPath)), pluginIdMap, workSmaliFiles);
                         } else {
-                            Utils.log("替换" + fileName);
+                            Utils.logInfo("替换" + fileName);
                             copyOperation(file, new File(file.getPath().replace(pluginPath, workPath)));
                         }
                         break;
@@ -155,7 +155,7 @@ public abstract class MergeBase {
                     String fileType = xmlFile.getName().replace(".xml", "");
                     File workXmlFile = new File(xmlFile.getPath().replace(mPluginPath, mWorkPath));
                     if (workXmlFile.exists()) {
-                        Utils.log("合并: " + xmlFile.getName());
+                        Utils.logInfo("合并: " + xmlFile.getName());
                         try {
                             if ("public".equals(fileType)) {
                                 //  public合并
@@ -262,7 +262,7 @@ public abstract class MergeBase {
             String idStr = element.attributeValue("id");
             if (workMapTypeName.containsKey(type)) {
                 if (workMapTypeName.get(type).containsKey(name)) {
-                    Utils.log("移除plugin name: " + name + " : " + workMapTypeName.get(type).get(name) + " : " + type);
+                    Utils.logInfo("移除plugin name: " + name + " : " + workMapTypeName.get(type).get(name) + " : " + type);
                     String newId = "0x" + Integer.toHexString(workMapTypeName.get(type).get(name));
                     oldNewIdMap.put(idStr, newId);
                     pluginRootElement.remove(element);
@@ -272,7 +272,7 @@ public abstract class MergeBase {
                     String value = "0x" + Integer.toHexString(newId);
                     element.attribute("id").setValue(value);
                     typeMaxIdMap.put(type, newId);
-                    Utils.log(String.format("修改plugin name: %s ,id: 新值: %s", name, newId));
+                    Utils.logInfo(String.format("修改plugin name: %s ,id: 新值: %s", name, newId));
                     Map<String, Integer> map = workMapTypeName.getOrDefault(type, new HashMap<>(1024));
                     map.put(name, newId);
                     workMapTypeName.put(type, map);
@@ -286,7 +286,7 @@ public abstract class MergeBase {
                 element.attribute("id").setValue(value);
                 typeMaxIdMap.put(type, id);
                 allTypeMaxId = id;
-                Utils.log(String.format("修改plugin name: %s ,id: 新值: %s", name, value));
+                Utils.logInfo(String.format("修改plugin name: %s ,id: 新值: %s", name, value));
                 Map<String, Integer> map = workMapTypeName.getOrDefault(type, new HashMap<>(1024));
                 map.put(name, id);
                 workMapTypeName.put(type, map);
@@ -355,12 +355,12 @@ public abstract class MergeBase {
         String workManifestPath = Utils.linkPath(workPath, "AndroidManifest.xml");
         String pluginManifestPath = Utils.linkPath(pluginPath, "AndroidManifest.xml");
         if (new File(pluginManifestPath).exists()) {
+            Utils.log("开始合并清单文件");
             SAXReader saxReader = new SAXReader();
             Document workDocument = saxReader.read(workManifestPath);
             Document pluginDocument = saxReader.read(pluginManifestPath);
             String workPackName = workDocument.getRootElement().attributeValue("package");
             String pluginPackName = pluginDocument.getRootElement().attributeValue("package");
-            Utils.log("开始合并清单文件");
             Element workManifestElement = workDocument.getRootElement();
             Element pluginManifestElement = pluginDocument.getRootElement();
 //      处理插件包名
@@ -370,7 +370,7 @@ public abstract class MergeBase {
 //        去除Manifest重复
             processElementToSole(workManifestElement, true);
 //        扩展处理ManiFestXML文件
-            processManiFestXMl(workDocument);
+            processManiFestXml(workDocument);
 //        写文件
             writeXmlFile(Utils.linkPath(workPath, "AndroidManifest.xml"), workDocument);
         }
@@ -382,7 +382,7 @@ public abstract class MergeBase {
      *
      * @param workDocument Document
      */
-    protected abstract void processManiFestXMl(Document workDocument);
+    protected abstract void processManiFestXml(Document workDocument);
 
     /**
      * 将插件的packageName替换成work的packageName
@@ -398,7 +398,7 @@ public abstract class MergeBase {
                 for (Attribute attribute : element.attributes()) {
                     String value = attribute.getValue();
                     if (value.contains(pluginPackName)) {
-                        Utils.log(String.format("插件标签%s,value:%s,将%s,替换成%s", element.getName(), value, pluginPackName, workPackName));
+                        Utils.logInfo(String.format("插件标签%s,value:%s,将%s,替换成%s", element.getName(), value, pluginPackName, workPackName));
                         attribute.setValue(value.replace(pluginPackName, workPackName));
                     }
                 }
@@ -434,7 +434,7 @@ public abstract class MergeBase {
                 value = name + ":" + value;
 
                 if (nameList.contains(value)) {
-                    Utils.log("去除重复元素： " + value);
+                    Utils.logInfo("去除重复元素： " + value);
                     workElement.remove(element);
                 } else {
                     nameList.add(value);
@@ -447,7 +447,7 @@ public abstract class MergeBase {
         if (isProcessContent) {
             //        处理需要合并的标签
             for (String noneName : noneRootElementList) {
-                Utils.log(String.format("合并%s,使其唯一", noneName));
+                Utils.logInfo(String.format("合并%s,使其唯一", noneName));
                 mergeElementFromName(workElement, noneName);
                 processElementToSole(workElement.element(noneName), false);
             }
@@ -531,7 +531,7 @@ public abstract class MergeBase {
             outPutFile.getParentFile().mkdirs();
             String outPutFilePath = outPutFile.getPath();
             outPutFilePath = outPutFilePath.substring(outPutFilePath.indexOf("smali"));
-            Utils.log(String.format("从%s替换%s", path, outPutFilePath));
+            Utils.logInfo(String.format("从%s替换%s", path, outPutFilePath));
 
             try (BufferedReader buffReader = new BufferedReader(new FileReader(tempFile));
                  BufferedWriter buffWriter = new BufferedWriter(new FileWriter(outPutFile))) {
@@ -568,7 +568,7 @@ public abstract class MergeBase {
     private String amendLine(String line, String sourceString, String targetString) {
         if (sourceString != null && targetString != null) {
             if (!targetString.equals(sourceString)) {
-                Utils.log(String.format("用:%s ; 替换: %s ", targetString, sourceString));
+                Utils.logInfo(String.format("用:%s ; 替换: %s ", targetString, sourceString));
                 line = line.replace(sourceString, targetString);
             }
         }

@@ -2,6 +2,7 @@ package com.fran.util;
 
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Scanner;
@@ -11,6 +12,19 @@ import java.util.Scanner;
  * * 说明:工具
  **/
 public class Utils {
+    private static boolean info = false;
+
+    public static void main(String[] args) {
+        String apk = "APK´ò°ü";
+        String apk2 = "APK合并";
+        try {
+           System.out.println( new String(apk.getBytes(StandardCharsets.ISO_8859_1),"GBK"));
+           System.out.println( new String(apk2.getBytes("GBK"),StandardCharsets.ISO_8859_1));
+        } catch (UnsupportedEncodingException e) {
+            e.printStackTrace();
+        }
+    }
+
     /**
      * 日志
      *
@@ -18,6 +32,12 @@ public class Utils {
      */
     public static void log(String s) {
         System.out.println(s);
+    }
+
+    public static void logInfo(String s) {
+        if (info) {
+            System.out.println(s);
+        }
     }
 
     /**
