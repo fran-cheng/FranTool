@@ -69,7 +69,7 @@ public abstract class MergeBase {
      */
     public void merge() {
         try {
-            mergeManiFestXml(mWorkPath, mWorkPath);
+            mergeManiFestXml(mWorkPath, mPluginPath);
         } catch (DocumentException e) {
             System.err.println("合并AndroidManiXml 出错");
             e.printStackTrace();
