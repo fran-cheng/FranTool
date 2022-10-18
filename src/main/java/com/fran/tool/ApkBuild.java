@@ -1,11 +1,15 @@
 package com.fran.tool;
 
 
+import com.fran.merge.MergeBase;
 import com.fran.util.RuntimeHelper;
 import com.fran.util.Sign;
 import com.fran.util.Utils;
 
+import org.dom4j.Document;
+
 import java.io.*;
+import java.util.Scanner;
 
 /**
  * @author 程良明
@@ -32,6 +36,15 @@ public class ApkBuild {
             apkBuild.sign(path);
         } else if (key.equalsIgnoreCase("key")) {
             new KeyTool(path);
+        } else if (key.equalsIgnoreCase("apkMerge")) {
+            Utils.log("输入需要合并的文件路径: ");
+            String pluginPath = new Scanner(System.in).next();
+            new MergeBase(path, pluginPath) {
+                @Override
+                protected void processManiFestXml(Document workDocument) {
+
+                }
+            }.merge();
         }
 
         Utils.log("Done!");

@@ -17,9 +17,7 @@ repositories {
 }
 
 dependencies {
-    implementation 'org.yaml:snakeyaml:1.29:android'
     implementation 'org.dom4j:dom4j:2.0.0'
-    implementation 'xpp3:xpp3:1.1.4c'
 }
 
 
