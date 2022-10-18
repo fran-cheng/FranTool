@@ -10,9 +10,13 @@ import org.dom4j.io.OutputFormat;
 import org.dom4j.io.SAXReader;
 import org.dom4j.io.XMLWriter;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.BufferedWriter;
 import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
@@ -32,21 +36,19 @@ import java.util.Objects;
  * 2、当处于文件合并的时候保留work的（例如:AndroidManiFest.xml, value/下的xml文件）
  * 3、当处于文件替换的时候即由plugin替换work的对应文件
  **/
-public class MergeBase {
+public abstract class MergeBase {
     private final String[] mCopyWhiteList = new String[]{"assets", "lib", "res", "smali"};
     private final String mWorkPath;
     private final String mPluginPath;
-    protected Document mWorkDocument;
-    protected Document mPluginDocument;
-    /**
-     * 插件修改过后的新旧id映射
-     */
-    private Map<String, String> mPluginIdMap;
+    private static final String KEY = "0x7f";
 
     public static void main(String[] args) {
-//        MergeBase mergeBase = new MergeBase("F:\\Work\\Test\\A", "F:\\Work\\Test\\B");
-//        MergeBase mergeBase = new MergeBase("F:\\Work\\2022-10\\mrscxqzf_test", "F:\\Work\\2022-10\\6.84.1SDK(Android)\\6.84.1SDK(加密)\\6.84.1SDK(加密)\\6.84.1SDK\\6.84.1\\X7_sdk_demo_6.84.1_20220513");
-        MergeBase mergeBase = new MergeBase("F:\\Work\\2022-10\\hcrmx_mi_1_1_8", "F:\\AndroidProject\\leaning\\TempActivity\\app\\build\\outputs\\apk\\release\\app-release-unsigned");
+        MergeBase mergeBase = new MergeBase("F:\\Work\\2022-10\\hcrmx_mi_1_1_8", "F:\\AndroidProject\\leaning\\TempActivity\\app\\build\\outputs\\apk\\release\\app-release-unsigned") {
+            @Override
+            protected void processManiFestXMl(Document workDocument) {
+
+            }
+        };
         mergeBase.merge();
     }
 
@@ -66,31 +68,35 @@ public class MergeBase {
      * 合并操作
      */
     public void merge() {
-        mergeManiFestXml();
-        copyPluginSource();
+        try {
+            mergeManiFestXml(mWorkPath, mWorkPath);
+        } catch (DocumentException e) {
+            System.err.println("合并AndroidManiXml 出错");
+            e.printStackTrace();
+        }
+        copyPluginSource(mWorkPath, mPluginPath, mCopyWhiteList);
     }
 
     /**
      * 拷贝插件资源
      */
-    public void copyPluginSource() {
+    public void copyPluginSource(String workPath, String pluginPath, String[] whiteList) {
+        Map<String, String> pluginIdMap = null;
         Utils.log("开始处理资源文件");
-        File workDir = new File(mWorkPath);
-        File pluginDir = new File(mPluginPath);
+        File workDir = new File(workPath);
+        File pluginDir = new File(pluginPath);
         File[] workSmaliFiles = workDir.listFiles((file, s) -> {
             String fileName = s.toLowerCase();
-            if (fileName.startsWith("smali")) {
-                return true;
-            }
-            return false;
+            return fileName.startsWith("smali");
         });
-        if (workSmaliFiles.length > 9) {
-            // TODO: 2022/10/14 workSmaliFiles 得再按长度排序
+
+        if (workSmaliFiles != null && workSmaliFiles.length > 9) {
+            workSmaliFiles = (File[]) Arrays.stream(workSmaliFiles).sorted(Comparator.comparingInt(file -> file.getName().length())).toArray();
         }
 
-        File[] files = pluginDir.listFiles((file, s) -> {
+        File[] needProcessFiles = pluginDir.listFiles((file, s) -> {
             String fileName = s.toLowerCase();
-            for (String whiteName : mCopyWhiteList) {
+            for (String whiteName : whiteList) {
                 if (fileName.startsWith(whiteName)) {
                     return true;
                 }
@@ -98,26 +104,26 @@ public class MergeBase {
             return false;
         });
 
-        for (File file : files) {
-            String fileName = file.getName();
-            Utils.log(String.format("处理%s文件夹", fileName));
-            switch (fileName) {
-                case "lib":
-                    copyLibs(workDir, file);
-                    break;
-                case "res":
-                    mergeRes(file);
-                    break;
-                default:
-                    if (fileName.startsWith("smali")) {
-//                        throw  new RuntimeException("clm");
-                        // TODO: 2022/10/13 需要判断对应的smali文件在那个smali_class里面， 存在就替换文件， 不存在就替换到最新的？
-                        copySmaliOperation(file, new File(file.getPath().replace(mPluginPath, mWorkPath)), mPluginIdMap, workSmaliFiles);
-                    } else {
-                        Utils.log("替换" + fileName);
-                        copyOperation(file, new File(file.getPath().replace(mPluginPath, mWorkPath)));
-                    }
-                    break;
+        if (needProcessFiles != null) {
+            for (File file : needProcessFiles) {
+                String fileName = file.getName();
+                Utils.log(String.format("处理%s文件夹", fileName));
+                switch (fileName) {
+                    case "lib":
+                        copyLibs(workDir, file);
+                        break;
+                    case "res":
+                        pluginIdMap = mergeRes(file);
+                        break;
+                    default:
+                        if (fileName.startsWith("smali")) {
+                            copySmaliOperation(file, new File(file.getPath().replace(pluginPath, workPath)), pluginIdMap, workSmaliFiles);
+                        } else {
+                            Utils.log("替换" + fileName);
+                            copyOperation(file, new File(file.getPath().replace(pluginPath, workPath)));
+                        }
+                        break;
+                }
             }
         }
     }
@@ -127,7 +133,9 @@ public class MergeBase {
      *
      * @param file File
      */
-    private void mergeRes(File file) {
+    private Map<String, String> mergeRes(File file) {
+
+        Map<String, String> pluginIdMap = null;
         //                    value的需要合并，其他直接覆盖
         File[] mergeValueFiles = file.listFiles((file1, s) -> s.startsWith("value"));
         File[] copyFiles = file.listFiles((file1, s) -> !s.startsWith("value"));
@@ -148,12 +156,18 @@ public class MergeBase {
                     File workXmlFile = new File(xmlFile.getPath().replace(mPluginPath, mWorkPath));
                     if (workXmlFile.exists()) {
                         Utils.log("合并: " + xmlFile.getName());
-                        if ("public".equals(fileType)) {
-                            //  public合并
-                            mPluginIdMap = mergePublicXml(saxReader, xmlFile, workXmlFile);
-                            continue;
+                        try {
+                            if ("public".equals(fileType)) {
+                                //  public合并
+
+                                pluginIdMap = mergePublicXml(saxReader, xmlFile, workXmlFile);
+                                continue;
+                            }
+                            mergeValueXml(saxReader, xmlFile, workXmlFile);
+                        } catch (DocumentException e) {
+                            System.err.printf("合并%s出错%n", xmlFile.getName());
+                            e.printStackTrace();
                         }
-                        mergeValueXml(saxReader, xmlFile, workXmlFile);
                     } else {
                         copyOperation(xmlFile, new File(xmlFile.getPath().replace(mPluginPath, mWorkPath)));
                     }
@@ -161,6 +175,8 @@ public class MergeBase {
                 }
             }
         }
+
+        return pluginIdMap;
     }
 
     /**
@@ -170,41 +186,37 @@ public class MergeBase {
      * @param xmlFile     File
      * @param workXmlFile File
      */
-    private void mergeValueXml(SAXReader saxReader, File xmlFile, File workXmlFile) {
-        try {
-            Document pluginXml = saxReader.read(xmlFile);
-            Document workXml = saxReader.read(workXmlFile);
-            Element pluginRootElement = pluginXml.getRootElement();
-            Element workRootElement = workXml.getRootElement();
-            List<String> workNameList = new ArrayList<>(1024);
-            Map<String, Element> workMapElement = new HashMap<>(1024);
-            for (Element element : workRootElement.elements()) {
-                String name = element.attributeValue("name");
-                if (workNameList.contains(name)) {
-                    continue;
-                }
-                workNameList.add(name);
-                workMapElement.put(name, element);
+    private void mergeValueXml(SAXReader saxReader, File xmlFile, File workXmlFile) throws DocumentException {
+        Document pluginXml = saxReader.read(xmlFile);
+        Document workXml = saxReader.read(workXmlFile);
+        Element pluginRootElement = pluginXml.getRootElement();
+        Element workRootElement = workXml.getRootElement();
+        List<String> workNameList = new ArrayList<>(1024);
+        Map<String, Element> workMapElement = new HashMap<>(1024);
+        for (Element element : workRootElement.elements()) {
+            String name = element.attributeValue("name");
+            if (workNameList.contains(name)) {
+                continue;
             }
-            List<String> pluginNameList = new ArrayList<>(1024);
-            for (Element element : pluginRootElement.elements()) {
-                String name = element.attributeValue("name");
-                if (pluginNameList.contains(name)) {
-                    continue;
-                }
-                pluginNameList.add(name);
-                if (workNameList.contains(name)) {
-//                                                以插件为准，移除work的
-                    Element oldElement = workMapElement.get(name);
-                    workRootElement.remove(oldElement);
-                }
-            }
-//                                        合并
-            workRootElement.appendContent(pluginRootElement);
-            writeXmlFile(workXmlFile.getPath(), workXml);
-        } catch (DocumentException e) {
-            e.printStackTrace();
+            workNameList.add(name);
+            workMapElement.put(name, element);
         }
+        List<String> pluginNameList = new ArrayList<>(1024);
+        for (Element element : pluginRootElement.elements()) {
+            String name = element.attributeValue("name");
+            if (pluginNameList.contains(name)) {
+                continue;
+            }
+            pluginNameList.add(name);
+            if (workNameList.contains(name)) {
+//                                                以插件为准，移除work的
+                Element oldElement = workMapElement.get(name);
+                workRootElement.remove(oldElement);
+            }
+        }
+//                                        合并
+        workRootElement.appendContent(pluginRootElement);
+        writeXmlFile(workXmlFile.getPath(), workXml);
     }
 
     /**
@@ -213,101 +225,85 @@ public class MergeBase {
      * @param saxReader   SAXReader
      * @param xmlFile     pluginPublicXmlFile
      * @param workXmlFile workPublicXmlFile
-     * @return
+     * @return id值映射
      */
-    private Map<String, String> mergePublicXml(SAXReader saxReader, File xmlFile, File workXmlFile) {
+    private Map<String, String> mergePublicXml(SAXReader saxReader, File xmlFile, File workXmlFile) throws DocumentException {
         Map<String, String> oldNewIdMap = new HashMap<>(1024);
         Map<String, Map<String, Integer>> workMapTypeName = new HashMap<>(1024);
-        try {
-            Document pluginXml = saxReader.read(xmlFile);
-            Document workXml = saxReader.read(workXmlFile);
-            Element pluginRootElement = pluginXml.getRootElement();
-            Element workRootElement = workXml.getRootElement();
-            Map<String, Integer> typeMaxIdMap = new HashMap<>(16);
-            for (Element element : workRootElement.elements()) {
-                String type = element.attributeValue("type");
-                String name = element.attributeValue("name");
-                String idString = element.attributeValue("id");
-
-                int id = Integer.parseInt(idString.substring(2), 16);
-                Map<String, Integer> nameIdMap = workMapTypeName.getOrDefault(type, new HashMap<>(1024));
-                nameIdMap.put(name, id);
-                workMapTypeName.put(type, nameIdMap);
-                if (typeMaxIdMap.getOrDefault(type, 0) < id) {
-//                                      更新类型最大值
-                    typeMaxIdMap.put(type, id);
-                }
+        Document pluginXml = saxReader.read(xmlFile);
+        Document workXml = saxReader.read(workXmlFile);
+        Element pluginRootElement = pluginXml.getRootElement();
+        Element workRootElement = workXml.getRootElement();
+        Map<String, Integer> typeMaxIdMap = new HashMap<>(16);
+        for (Element element : workRootElement.elements()) {
+            String type = element.attributeValue("type");
+            String name = element.attributeValue("name");
+            String idString = element.attributeValue("id");
+            int id = Integer.parseInt(idString.substring(2), 16);
+            Map<String, Integer> nameIdMap = workMapTypeName.getOrDefault(type, new HashMap<>(1024));
+            nameIdMap.put(name, id);
+            workMapTypeName.put(type, nameIdMap);
+            if (typeMaxIdMap.getOrDefault(type, 0) < id) {
+//              更新类型最大值
+                typeMaxIdMap.put(type, id);
             }
-
+        }
 //            获取最大Id，用来添加新类型
-            int allTypeMaxId = 0;
-            for (int id : typeMaxIdMap.values()) {
-                if (id > allTypeMaxId) {
-                    allTypeMaxId = id;
-                }
+        int allTypeMaxId = 0;
+        for (int id : typeMaxIdMap.values()) {
+            if (id > allTypeMaxId) {
+                allTypeMaxId = id;
             }
-
+        }
 //            改变plugin值
-            for (Element element : pluginRootElement.elements()) {
-                String type = element.attributeValue("type");
-                String name = element.attributeValue("name");
-                String idStr = element.attributeValue("id");
-                if (workMapTypeName.containsKey(type)) {
-                    if (workMapTypeName.get(type).containsKey(name)) {
-                        Utils.log("移除plugin name: " + name + " : " + workMapTypeName.get(type).get(name) + " : " + type);
-
-                        String newId = "0x" + Integer.toHexString(workMapTypeName.get(type).get(name));
-                        oldNewIdMap.put(idStr, newId);
-                        pluginRootElement.remove(element);
-                    } else {
-                        int maxId = typeMaxIdMap.get(type);
-                        int newId = maxId + 1;
-                        String value = "0x" + Integer.toHexString(newId);
-                        element.attribute("id").setValue(value);
-                        typeMaxIdMap.put(type, newId);
-                        Utils.log(String.format("修改plugin name: %s ,id: 新值: %s", name, newId));
-                        Map<String, Integer> map = workMapTypeName.getOrDefault(type, new HashMap<>(1024));
-                        map.put(name, newId);
-                        workMapTypeName.put(type, map);
-                        oldNewIdMap.put(idStr, value);
-                    }
+        for (Element element : pluginRootElement.elements()) {
+            String type = element.attributeValue("type");
+            String name = element.attributeValue("name");
+            String idStr = element.attributeValue("id");
+            if (workMapTypeName.containsKey(type)) {
+                if (workMapTypeName.get(type).containsKey(name)) {
+                    Utils.log("移除plugin name: " + name + " : " + workMapTypeName.get(type).get(name) + " : " + type);
+                    String newId = "0x" + Integer.toHexString(workMapTypeName.get(type).get(name));
+                    oldNewIdMap.put(idStr, newId);
+                    pluginRootElement.remove(element);
                 } else {
-//                    类型不存在，需要更改所有的id
-                    int id = typeMaxIdMap.getOrDefault(type, 0);
-                    if (id == 0) {
-                        id = ((allTypeMaxId >> 16) + 1) << 16;
-                    } else {
-                        id++;
-                    }
-                    String value = "0x" + Integer.toHexString(id);
+                    int maxId = typeMaxIdMap.get(type);
+                    int newId = maxId + 1;
+                    String value = "0x" + Integer.toHexString(newId);
                     element.attribute("id").setValue(value);
-                    typeMaxIdMap.put(type, id);
-                    allTypeMaxId = id;
-                    Utils.log(String.format("修改plugin name: %s ,id: 新值: %s", name, value));
+                    typeMaxIdMap.put(type, newId);
+                    Utils.log(String.format("修改plugin name: %s ,id: 新值: %s", name, newId));
                     Map<String, Integer> map = workMapTypeName.getOrDefault(type, new HashMap<>(1024));
-                    map.put(name, id);
+                    map.put(name, newId);
                     workMapTypeName.put(type, map);
                     oldNewIdMap.put(idStr, value);
                 }
+            } else {
+//                    类型不存在，需要更改所有的id
+                int id = typeMaxIdMap.getOrDefault(type, 0);
+                id = id == 0 ? ((allTypeMaxId >> 16) + 1) << 16 : id + 1;
+                String value = "0x" + Integer.toHexString(id);
+                element.attribute("id").setValue(value);
+                typeMaxIdMap.put(type, id);
+                allTypeMaxId = id;
+                Utils.log(String.format("修改plugin name: %s ,id: 新值: %s", name, value));
+                Map<String, Integer> map = workMapTypeName.getOrDefault(type, new HashMap<>(1024));
+                map.put(name, id);
+                workMapTypeName.put(type, map);
+                oldNewIdMap.put(idStr, value);
             }
-//            合并xml
-            workRootElement.appendContent(pluginRootElement);
-//             重新排序,可不做
-            Utils.log("排序public.xml");
-            List<Element> nodes = workRootElement.elements();
-            nodes.sort(Comparator.comparing(element -> element.attributeValue("type")));
-            for (Element element : nodes) {
-                workRootElement.remove(element);
-            }
-            workRootElement.setContent(new ArrayList<>(nodes));
-
-            writeXmlFile(workXmlFile.getPath(), workXml);
-        } catch (
-                DocumentException e) {
-            e.printStackTrace();
         }
-
-
+//            合并xml
+        workRootElement.appendContent(pluginRootElement);
+//             重新排序,可不做
+        Utils.log("排序public.xml");
+        List<Element> nodes = workRootElement.elements();
+        nodes.sort(Comparator.comparing(element -> element.attributeValue("type")));
+        for (Element element : nodes) {
+            workRootElement.remove(element);
+        }
+        workRootElement.setContent(new ArrayList<>(nodes));
+        writeXmlFile(workXmlFile.getPath(), workXml);
         return oldNewIdMap;
     }
 
@@ -355,33 +351,38 @@ public class MergeBase {
     /**
      * 合并AndroidManiFestXml文件
      */
-    private void mergeManiFestXml() {
-        String workManifestPath = Utils.linkPath(mWorkPath, "AndroidManifest.xml");
-        String pluginManifestPath = Utils.linkPath(mPluginPath, "AndroidManifest.xml");
-        String workPackName = "";
-        String pluginPackName = "";
-        try {
+    private void mergeManiFestXml(String workPath, String pluginPath) throws DocumentException {
+        String workManifestPath = Utils.linkPath(workPath, "AndroidManifest.xml");
+        String pluginManifestPath = Utils.linkPath(pluginPath, "AndroidManifest.xml");
+        if (new File(pluginManifestPath).exists()) {
             SAXReader saxReader = new SAXReader();
-            mWorkDocument = saxReader.read(workManifestPath);
-            mPluginDocument = saxReader.read(pluginManifestPath);
-            workPackName = mWorkDocument.getRootElement().attributeValue("package");
-            pluginPackName = mPluginDocument.getRootElement().attributeValue("package");
-        } catch (DocumentException e) {
-            e.printStackTrace();
-        }
-        Utils.log("开始合并清单文件");
-        Element workManifestElement = mWorkDocument.getRootElement();
-        Element pluginManifestElement = mPluginDocument.getRootElement();
+            Document workDocument = saxReader.read(workManifestPath);
+            Document pluginDocument = saxReader.read(pluginManifestPath);
+            String workPackName = workDocument.getRootElement().attributeValue("package");
+            String pluginPackName = pluginDocument.getRootElement().attributeValue("package");
+            Utils.log("开始合并清单文件");
+            Element workManifestElement = workDocument.getRootElement();
+            Element pluginManifestElement = pluginDocument.getRootElement();
 //      处理插件包名
-        processPluginPackageName(workPackName, pluginPackName, pluginManifestElement);
-        //        合并2个xml文件
-        workManifestElement.appendContent(pluginManifestElement);
+            processPluginPackageName(workPackName, pluginPackName, pluginManifestElement);
+            //        合并2个xml文件
+            workManifestElement.appendContent(pluginManifestElement);
 //        去除Manifest重复
-        processElementToSole(workManifestElement, true);
+            processElementToSole(workManifestElement, true);
+//        扩展处理ManiFestXML文件
+            processManiFestXMl(workDocument);
 //        写文件
-        writeXmlFile(Utils.linkPath(mWorkPath, "AndroidManifest.xml"), mWorkDocument);
-
+            writeXmlFile(Utils.linkPath(workPath, "AndroidManifest.xml"), workDocument);
+        }
     }
+
+    /**
+     * 用于扩展修改清单文件
+     * Document在此方法后，会写入xml文件
+     *
+     * @param workDocument Document
+     */
+    protected abstract void processManiFestXMl(Document workDocument);
 
     /**
      * 将插件的packageName替换成work的packageName
@@ -454,7 +455,6 @@ public class MergeBase {
 
     }
 
-
     /**
      * 将Element下的 name 合并成一个
      *
@@ -471,7 +471,6 @@ public class MergeBase {
         }
     }
 
-
     /**
      * 拷贝的具体操作
      * 存在的文件重新写入替换
@@ -482,20 +481,20 @@ public class MergeBase {
     private void copyOperation(File tempFile, File outPutFile) {
 
         if (tempFile.isDirectory()) {
-            outPutFile.mkdirs();
             for (File file : Objects.requireNonNull(tempFile.listFiles())) {
                 copyOperation(file, new File(outPutFile, file.getName()));
             }
         } else {
-            try (FileReader fileReader = new FileReader(tempFile);
-                 FileWriter fileWriter = new FileWriter(outPutFile)) {
-                char[] chars = new char[1024];
+            outPutFile.getParentFile().mkdirs();
+            try (BufferedInputStream bufferedInputStream = new BufferedInputStream(new FileInputStream(tempFile));
+                 BufferedOutputStream bufferedOutputStream = new BufferedOutputStream(new FileOutputStream(outPutFile))) {
+                byte[] chars = new byte[1024];
                 int length;
-                while ((length = fileReader.read(chars)) != -1) {
-                    fileWriter.write(chars, 0, length);
+                while ((length = bufferedInputStream.read(chars)) != -1) {
+                    bufferedOutputStream.write(chars, 0, length);
                 }
-                fileWriter.flush();
-            } catch (IOException e) {
+                bufferedOutputStream.flush();
+            } catch (Exception e) {
                 e.printStackTrace();
             }
         }
@@ -529,14 +528,8 @@ public class MergeBase {
                     outPutFile = exitFile;
                 }
             }
-
-
             outPutFile.getParentFile().mkdirs();
             String outPutFilePath = outPutFile.getPath();
-            if (!outPutFilePath.contains("R$")) {
-//                Utils.log("不处理非R文件");
-                return;
-            }
             outPutFilePath = outPutFilePath.substring(outPutFilePath.indexOf("smali"));
             Utils.log(String.format("从%s替换%s", path, outPutFilePath));
 
@@ -560,12 +553,12 @@ public class MergeBase {
 
     private String getHexString(String line) {
         String resValue = null;
-        if (line.contains("0x7f")) {
-            int startIndex = line.indexOf("0x7f");
+        if (line.contains(KEY)) {
+            int startIndex = line.indexOf(KEY);
             try {
                 resValue = line.substring(startIndex, startIndex + 10);
             } catch (Exception ignored) {
-                resValue = null;
+
             }
         }
 
