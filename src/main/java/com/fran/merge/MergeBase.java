@@ -44,7 +44,7 @@ public abstract class MergeBase {
     private static final String KEY = "0x7f";
 
     public static void main(String[] args) {
-        MergeBase mergeBase = new MergeBase("F:\\Work\\2022-10\\hcrmx_mi_1_1_8", "F:\\AndroidProject\\leaning\\TempActivity\\app\\build\\outputs\\apk\\release\\app-release-unsigned") {
+        MergeBase mergeBase = new MergeBase("F:\\Work\\2022-10\\hcrmx_", "F:\\AndroidProject\\leaning\\TempActivity\\app\\build\\outputs\\apk\\release\\app-release-unsigned") {
             @Override
             protected void processManiFestXml(Document workDocument) {
 
@@ -571,8 +571,13 @@ public abstract class MergeBase {
     private String amendLine(String line, String sourceString, String targetString) {
         if (sourceString != null && targetString != null) {
             if (!targetString.equals(sourceString)) {
+                // TODO: 2022/10/19  const/high16  转
                 Utils.logInfo(String.format("用:%s ; 替换: %s ", targetString, sourceString));
                 line = line.replace(sourceString, targetString);
+//                处理部分只需要搞16位的id更改后 如 const/high16 p1, 0x7f060000
+                if (line.contains("const/high16")) {
+                    line = line.replace("const/high16", "const");
+                }
             }
         }
         return line;
