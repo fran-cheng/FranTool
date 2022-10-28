@@ -20,6 +20,7 @@ import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Comparator;
@@ -44,7 +45,7 @@ public abstract class MergeBase {
     private static final String KEY = "0x7f";
 
     public static void main(String[] args) {
-        MergeBase mergeBase = new MergeBase("F:\\Work\\2022-10\\hcrmx_", "F:\\AndroidProject\\leaning\\TempActivity\\app\\build\\outputs\\apk\\release\\app-release-unsigned") {
+        MergeBase mergeBase = new MergeBase("F:\\Work\\2022-10\\hcrmx_", "F:\\AndroidProject\\leaning\\baseApp\\app\\build\\outputs\\apk\\release\\app-release-unsigned") {
             @Override
             protected void processManiFestXml(Document workDocument) {
 
@@ -536,8 +537,8 @@ public abstract class MergeBase {
             outPutFilePath = outPutFilePath.substring(outPutFilePath.indexOf("smali"));
             Utils.logInfo(String.format("从%s替换%s", path, outPutFilePath));
 
-            try (BufferedReader buffReader = new BufferedReader(new FileReader(tempFile));
-                 BufferedWriter buffWriter = new BufferedWriter(new FileWriter(outPutFile))) {
+            try (BufferedReader buffReader = new BufferedReader(new FileReader(tempFile, StandardCharsets.UTF_8));
+                 BufferedWriter buffWriter = new BufferedWriter(new FileWriter(outPutFile, StandardCharsets.UTF_8))) {
                 String line;
                 while ((line = buffReader.readLine()) != null) {
                     String resValue = getHexString(line);
