@@ -155,7 +155,7 @@ public class Utils {
      * @param f File
      * @return String
      */
-    static String read(File f) {
+    public static String read(File f) {
         String c = null;
 
         try {
