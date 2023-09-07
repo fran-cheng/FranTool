@@ -1,6 +1,6 @@
-!/bin/sh
+#!/bin/sh
 
-
+#
 # dex2jar - Tools to work with android .dex and java .class files
 # Copyright (c) 2009-2013 Panxiaobo
 # 
@@ -45,4 +45,4 @@ else
     done
 fi
 
-java -Xms512m -Xmx1024m -classpath "${_classpath}" "com.googlecode.dex2jar.tools.Dex2jarCmd" "$@"
+java -Xms512m -Xmx2048m -classpath "${_classpath}" "com.googlecode.dex2jar.tools.Dex2jarCmd" "$@"
