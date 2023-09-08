@@ -203,4 +203,25 @@ public class Utils {
         return stringBuilder.toString();
     }
 
+    /**
+     * 拷贝的具体操作
+     *
+     * @param tempFile   输入
+     * @param outPutFile 输出
+     */
+    private void copyOperation(File tempFile, File outPutFile) {
+        try (FileReader fileReader = new FileReader(tempFile);
+             FileWriter fileWriter = new FileWriter(outPutFile)) {
+            char[] chars = new char[1024];
+            int length;
+            while ((length = fileReader.read(chars)) != -1) {
+                fileWriter.write(chars, 0, length);
+            }
+            fileWriter.flush();
+
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+    }
+
 }
