@@ -6,6 +6,11 @@ import org.apache.commons.io.input.BOMInputStream;
 import java.io.*;
 import java.util.*;
 
+/**
+ * @author 程良明
+ * @date 2023/9/9
+ * * * 说明: 工具类
+ **/
 public class Util {
 
 
@@ -126,12 +131,12 @@ public class Util {
     }
 
     /**
-     * ��ȡ�ı���һ������ָ��λ�ÿ�ͷ��ָ��λ�ý����ڵ��ı����ݡ�
-     * ��ȡ��ʽ��
+     * 提取文本中一个或多个指定位置开头与指定位置结束内的文本数据。
+     * 提取格式：
      * $[key]
-     * [*] ��ʾ�����ı���
-     * ���磺 [*]start$[parameter]end[*]
-     * @param src �ı�
+     * [*] 表示任意文本。
+     * 例如： [*]start$[parameter]end[*]
+     * @param src 文本
      * @param pattern
      * @return
      */
@@ -139,12 +144,12 @@ public class Util {
         return evalScope0(src, pattern, true);
     }
     /**
-     * ��ȡ�ı���һ������ָ��λ�ÿ�ͷ��ָ��λ�ý����ڵ��ı����ݡ�
-     * ��ȡ��ʽ��
+     * 提取文本中一个或多个指定位置开头与指定位置结束内的文本数据。
+     * 提取格式：
      * $[key]
-     * [*] ��ʾ�����ı���
-     * ���磺 [*]start$[parameter]end[*]
-     * @param src �ı�
+     * [*] 表示任意文本。
+     * 例如： [*]start$[parameter]end[*]
+     * @param src 文本
      * @param pattern
      * @return
      */
@@ -214,7 +219,7 @@ public class Util {
                 if(srcidx<len){
                     value = src.substring(srcidx);
                     sc.put(key, value);
-                    //System.out.println("���Map������"+key+" = "+value);
+                    //System.out.println("获得Map变量："+key+" = "+value);
                 }
                 break;
             }else{
@@ -250,7 +255,7 @@ public class Util {
                 value = src.substring(srcidx, k);
                 srcidx = k;
                 sc.put(key, value);
-                //System.out.println("���Map������"+key+" = "+value);
+                //System.out.println("获得Map变量："+key+" = "+value);
             }
         }
         if(ls == null){
@@ -264,19 +269,19 @@ public class Util {
     }
 
     /**
-     * ���ļ���Ŀ¼�µ��ļ����Ƶ�Ŀ��Ŀ¼��. ���Ŀ���ļ��Ѵ��ڣ����ǡ�
-     * @param f �ļ���Ŀ¼
-     * @param toParent Ŀ��Ŀ¼
+     * 将文件或目录下的文件复制到目标目录下. 如果目标文件已存在，覆盖。
+     * @param f 文件或目录
+     * @param toParent 目标目录
      */
     public static void copyIntoParent(File f, File toParent) throws FileNotFoundException, IOException {
         if(!toParent.exists()){
             Util.makeIfDir(toParent);
         }else if(!toParent.isDirectory()){
-            throw new IOException(toParent+" ����Ŀ¼!");
+            throw new IOException(toParent+" 不是目录!");
         }
 
         if(!f.exists())
-            throw new IOException(f + "�����ڣ�");
+            throw new IOException(f + "不存在！");
         if(f.isFile())
             copyFileToDirectory(f, toParent);
         else {
@@ -293,7 +298,7 @@ public class Util {
         FileInputStream fis = null;
         FileOutputStream fos = null;
         try{
-            System.out.println("���� "+src + " -> "+target);
+            System.out.println("复制 "+src + " -> "+target);
             fis = new FileInputStream(src);
             target.createNewFile();
             fos = new FileOutputStream(target);
@@ -305,16 +310,16 @@ public class Util {
     }
 
     /**
-     * ɾ��Ŀ¼���ļ����������ļ������Ƿ����ļ���
+     * 删除目录或文件，而不管文件夹里是否有文件。
      * @param f
      */
     public static boolean delete(File f){
-        System.out.println("ɾ�� "+f);
+        System.out.println("删除 "+f);
         return Util.deleteAll(f);
     }
 
     /**
-     * �ƶ�Ŀ¼���ļ���Ŀ���ļ�����
+     * 移动目录或文件至目标文件夹下
      */
     public static boolean move(File f, File toParent) throws FileNotFoundException, IOException {
         copyIntoParent(f, toParent);
@@ -403,9 +408,9 @@ public class Util {
 
     public static String inputStreamToString(InputStream is, String charset) throws IOException {
         if(charset.toLowerCase().startsWith("utf-")){
-            //�ɼ��������ͣ����޳�bom
+            //可检测多种类型，并剔除bom
             BOMInputStream bomIn = new BOMInputStream(is, false, ByteOrderMark.UTF_8, ByteOrderMark.UTF_16LE, ByteOrderMark.UTF_16BE);
-            //����⵽bom����ʹ��bom��Ӧ�ı���
+            //若检测到bom，则使用bom对应的编码
             if(bomIn.hasBOM())
                 charset = bomIn.getBOMCharsetName();
             is = bomIn;

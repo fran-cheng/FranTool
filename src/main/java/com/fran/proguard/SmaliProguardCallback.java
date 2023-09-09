@@ -1,29 +1,33 @@
 package com.fran.proguard;
-
+/**
+ * @author 程良明
+ * @date 2023/9/9
+ * * * 说明: Smali混淆回调，加垃圾代码
+ **/
 public class SmaliProguardCallback extends SmaliParser.Callback{
     private boolean mIsAnonymous;
     private String mClassName;
     private String mSupreClassName;
     private int mFieldCount;
     private static String[] SS = new String[]{
-            "test",
-            "testtest",
-            "testtesttest",
-            "Lorem ipsum dolor sit amet",
-            "consectetur adipiscing elit",
-            "testtesttesttest",
-            "testtesttesttesttest",
-            "testtesttesttesttesttest",
-            "incididunt ut labore et",
-            "Ut enim ad minim veniam",
-            "quis nostrud exercitation ullamco",
-            "Duis aute irure dolor in reprehenderit in",
-            "voluptate velit esse cillum dolore",
-            "Excepteur sint occaecat",
-            "sunt in culpa qui officia deserunt",
-            "testtesttesttesttesttesttest",
-            "testtesttesttesttesttesttesttest",
-            "testtesttesttesttesttesttesttesttest"
+                    "test",
+                    "testtest",
+                    "testtesttest",
+                    "Lorem ipsum dolor sit amet",
+                    "consectetur adipiscing elit",
+                    "testtesttesttest",
+                    "testtesttesttesttest",
+                    "testtesttesttesttesttest",
+                    "incididunt ut labore et",
+                    "Ut enim ad minim veniam",
+                    "quis nostrud exercitation ullamco",
+                    "Duis aute irure dolor in reprehenderit in",
+                    "voluptate velit esse cillum dolore",
+                    "Excepteur sint occaecat",
+                    "sunt in culpa qui officia deserunt",
+                    "testtesttesttesttesttesttest",
+                    "testtesttesttesttesttesttesttest",
+                    "testtesttesttesttesttesttesttesttest"
     };
     private int mCounter;
 
@@ -57,7 +61,7 @@ public class SmaliProguardCallback extends SmaliParser.Callback{
                     int args = Math.max(Integer.parseInt(lx.nextIdentifier()), 1);
                     lx.append(Integer.toString(args));
                     lx.skipToLineEnd();
-                    // �������췽��
+                    // 跳过构造方法
                     lx.skipTo(mSupreClassName+"-><init>", ".end");
                     lx.skipToLineEnd();
                     for(int i=1;i<=mFieldCount;i++){
@@ -69,7 +73,7 @@ public class SmaliProguardCallback extends SmaliParser.Callback{
             else{
                 if(Util.random(0, 2) == 0){
                     if(
-                    lx.skipTo(".locals", ".end")){
+                                    lx.skipTo(".locals", ".end")){
                         lx.skipWhitespace();
                         int c = Util.random(1, 2);
                         int args = Math.max(Integer.parseInt(lx.nextIdentifier()), c);
