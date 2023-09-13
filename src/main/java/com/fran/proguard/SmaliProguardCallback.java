@@ -1,4 +1,7 @@
 package com.fran.proguard;
+
+import com.fran.util.Utils;
+
 /**
  * @author 程良明
  * @date 2023/9/9
@@ -9,26 +12,6 @@ public class SmaliProguardCallback extends SmaliParser.Callback{
     private String mClassName;
     private String mSupreClassName;
     private int mFieldCount;
-    private static String[] SS = new String[]{
-                    "test",
-                    "testtest",
-                    "testtesttest",
-                    "Lorem ipsum dolor sit amet",
-                    "consectetur adipiscing elit",
-                    "testtesttesttest",
-                    "testtesttesttesttest",
-                    "testtesttesttesttesttest",
-                    "incididunt ut labore et",
-                    "Ut enim ad minim veniam",
-                    "quis nostrud exercitation ullamco",
-                    "Duis aute irure dolor in reprehenderit in",
-                    "voluptate velit esse cillum dolore",
-                    "Excepteur sint occaecat",
-                    "sunt in culpa qui officia deserunt",
-                    "testtesttesttesttesttesttest",
-                    "testtesttesttesttesttesttesttest",
-                    "testtesttesttesttesttesttesttesttest"
-    };
     private int mCounter;
 
     public boolean onKeyword(String keyword, SmaliParser lx) {
@@ -114,6 +97,6 @@ public class SmaliProguardCallback extends SmaliParser.Callback{
     }
 
     private static final String rand(){
-        return SS[Util.random(0, SS.length-1)];
+        return Utils.sha1(System.currentTimeMillis() + Utils.random(0, 10000) + "", 0);
     }
 }
