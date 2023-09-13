@@ -12,7 +12,7 @@ import java.io.File;
  * 参考https://juejin.cn/post/6982111395621896229
  **/
 
-@Deprecated // TODO: 2023/9/13 时间关系，先使用了  apk2aar 打包，后续再研究 
+@Deprecated // TODO: 2023/9/13 时间关系，先使用了  apk2aar 打包，后续再研究
 public class Apk2Aab {
 	public static void main(String[] args) {
 
