@@ -2,17 +2,21 @@ package com.fran.proguard;
 
 
 import javax.imageio.ImageIO;
+
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+
 /**
  * @author 程良明
  * @date 2023/9/9
  * * * 说明:apk混淆
  **/
+
+// TODO: 2023/9/14 添加混淆，概率配置，默认35%。 修改图片混淆 改为添加1-3像素点，看看是否能使用stringfog来对字符串加密
 public class ApkProguard {
 	private File mDir;
 	private File mSmaliDir;
@@ -31,7 +35,10 @@ public class ApkProguard {
 	}
 
 	public static void main(String[] args) throws IOException {
-		dating();
+//		dating();
+		ApkProguard c = new ApkProguard("C:\\Users\\Fran\\Desktop\\Android\\Vegas-release-1");
+		c.proguardSmali("com.tongitsslots..colorgame");
+		c.proguardImages();
 	}
 
 
@@ -197,7 +204,7 @@ public class ApkProguard {
 			String src = Util.read(f, "utf-8");
 			SmaliParser sl = new SmaliParser(src, new SmaliProguardCallback());
 			String ct = null;
-			System.out.println("Proguard "+f);
+			System.out.println("Proguard " + f);
 			ct = sl.parse();
 			Util.writeFile(f.getAbsolutePath(), ct, "utf-8");
 		}
