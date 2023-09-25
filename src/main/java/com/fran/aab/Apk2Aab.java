@@ -4,6 +4,14 @@ import com.fran.util.RuntimeHelper;
 import com.fran.util.Utils;
 
 import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.URL;
+import java.util.jar.JarFile;
+
+import brut.common.BrutException;
+import brut.util.AaptManager;
+import brut.util.Jar;
 
 /**
  * @author 程良明
@@ -12,7 +20,6 @@ import java.io.File;
  * 参考https://juejin.cn/post/6982111395621896229
  **/
 
-@Deprecated // TODO: 2023/9/13 时间关系，先使用了  apk2aar 打包，后续再研究
 public class Apk2Aab {
 	public static void main(String[] args) {
 
@@ -22,13 +29,20 @@ public class Apk2Aab {
 		// TODO: 2023/9/8 解压 base.apk
 	}
 
-
 	/**
 	 * 编译资源
 	 */
 	private void compile() {
-		String aaptPath = "D:\\FranGitHub\\FranTool\\tool\\aab-tool\\aapt2.exe";
-		String apkDecodePath = "D:\\FranGitHub\\FranTool\\Runtime\\app-debug";
+		String aaptPath;
+
+		try {
+			File aapt = AaptManager.getAapt2();
+			aaptPath = aapt.getPath();
+		} catch (BrutException e) {
+			throw new RuntimeException(e);
+		}
+
+		String apkDecodePath = "D:\\FranGitHub\\FranTool\\runtime\\20230922-X2-gf";
 		String cmdCompile = String.format("%s compile --legacy --dir %s -o compiled_resources.zip", aaptPath, Utils.linkPath(apkDecodePath, "res"));
 		try {
 			RuntimeHelper.getInstance().run(cmdCompile);

@@ -19,6 +19,7 @@ repositories {
 dependencies {
     implementation 'org.netbeans.external:org-apache-commons-io:RELEASE113'
     implementation 'org.dom4j:dom4j:2.0.0'
+    implementation files("D:\\SoftWare\\tool\\apktool.jar")
 }
 
 
