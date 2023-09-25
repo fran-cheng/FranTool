@@ -28,14 +28,36 @@ import brut.util.Jar;
  **/
 
 public class Apk2Aab {
+	private final String mApkDecodePath;
+	private final String mWorkPath;
+
 	public static void main(String[] args) throws IOException {
 
-		Apk2Aab aab = new Apk2Aab();
-//		aab.compile();
-//		aab.linkSources();
-//		aab.unZipBase();
-		aab.copySources();
-		// TODO: 2023/9/8 解压 base.apk
+		Apk2Aab aab = new Apk2Aab("D:\\FranGitHub\\FranTool\\runtime\\20230922-X2-gf");
+		aab.process();
+	}
+
+	/**
+	 * 构造方法
+	 *
+	 * @param apkDecodePath apktool解包后的文件路径
+	 */
+	public Apk2Aab(String apkDecodePath) {
+		mApkDecodePath = apkDecodePath;
+		mWorkPath = Utils.linkPath(apkDecodePath, "fran_base_work");
+		File workFile = new File(mWorkPath);
+		if (workFile.exists()) {
+//			Utils.delDir(workFile);
+		}
+		workFile.mkdirs();
+	}
+
+	public void process() throws IOException {
+//		String compileFIlePath = compile();
+//		String baseApkPath = linkSources(compileFIlePath);
+//		String basePath = unZipBase(baseApkPath);
+//		copySources(basePath);
+		copySources("D:\\FranGitHub\\FranTool\\runtime\\20230922-X2-gf\\fran_base_work\\base");
 	}
 
 
@@ -51,38 +73,40 @@ public class Apk2Aab {
 	/**
 	 * 编译资源
 	 */
-	private void compile() {
+	private String compile() {
+		String compileFIlePath = Utils.linkPath(mWorkPath, "compiled_resources.zip");
 		String aaptPath = getAapt2Path();
-		String apkDecodePath = "D:\\FranGitHub\\FranTool\\runtime\\20230922-X2-gf";
-		String cmdCompile = String.format("%s compile --legacy --dir %s -o compiled_resources.zip", aaptPath, Utils.linkPath(apkDecodePath, "res"));
+		String cmdCompile = String.format("%s compile --legacy --dir %s -o %s", aaptPath, Utils.linkPath(mApkDecodePath, "res"), compileFIlePath);
 		try {
 			RuntimeHelper.getInstance().run(cmdCompile);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+		return compileFIlePath;
 	}
 
 	/**
 	 * 关联资源
 	 */
-	private void linkSources() {
-
-		String apkDecodePath = "D:\\FranGitHub\\FranTool\\runtime\\20230922-X2-gf";
+	private String linkSources(String compileFIlePath) {
+		String outBaseApk = Utils.linkPath(mWorkPath, "base.apk");
 		String aaptPath = getAapt2Path();
+		// TODO: 2023/9/25 读取apktool的yaml获取
 		String androidJarPath = "D:\\FranGitHub\\FranTool\\tool\\aab-tool\\android.jar";
-//		String androidJarPath = Config.getDefaultConfig().frameworkDirectory;
-
 		String minVersion = "24";
 		String targetVersion = "31";
 		String versionCode = "1";
 		String versionName = "1.0.0";
-		String cmdLink = String.format("%s link --proto-format -o base.apk -I %s --min-sdk-version %s --target-sdk-version %s --version-code %s --version-name %s --manifest %s -R compiled_resources.zip --auto-add-overlay",
-						aaptPath, androidJarPath, minVersion, targetVersion, versionCode, versionName, Utils.linkPath(apkDecodePath, "AndroidManifest.xml"));
+
+		String cmdLink = String.format("%s link --proto-format -o %s -I %s --min-sdk-version %s --target-sdk-version %s --version-code %s --version-name %s --manifest %s -R %s --auto-add-overlay",
+						aaptPath, outBaseApk, androidJarPath, minVersion, targetVersion, versionCode, versionName, Utils.linkPath(mApkDecodePath, "AndroidManifest.xml"), compileFIlePath);
 		try {
 			RuntimeHelper.getInstance().run(cmdLink);
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
+
+		return outBaseApk;
 	}
 
 
@@ -90,14 +114,13 @@ public class Apk2Aab {
 	 * 解压base.apk
 	 * 通过unzip解压到base文件夹，目录结构：
 	 */
-	private String unZipBase() {
+	private String unZipBase(String apkFilePath) {
 
-		String zipFilePath = "D:\\FranGitHub\\FranTool\\base.apk";
-		String destDirectory = "D:\\FranGitHub\\FranTool\\runtime\\20230922-X2-gf\\base";
+		String destDirectory = Utils.linkPath(mWorkPath, "base");
 		byte[] buffer = new byte[1024];
 		try {
 			// 创建解压缩输入流
-			FileInputStream fis = new FileInputStream(zipFilePath);
+			FileInputStream fis = new FileInputStream(apkFilePath);
 			ZipInputStream zis = new ZipInputStream(fis);
 			ZipEntry zipEntry = zis.getNextEntry();
 			while (zipEntry != null) {
@@ -128,12 +151,11 @@ public class Apk2Aab {
 	/**
 	 * 拷贝资源
 	 */
-	private void copySources() throws IOException {
-//		创建 base/manifest 将 base/AndroidManifest.xml 剪切过来
-		File manifesFile = new File("");
+	private void copySources(String basePath) throws IOException {
 
-		String apkDecodeBasePath = "D:\\FranGitHub\\FranTool\\runtime\\20230922-X2-gf\\base";
-		String apkDecodePath = "D:\\FranGitHub\\FranTool\\runtime\\20230922-X2-gf";
+		// TODO: 2023/9/25 完成文件copy操作
+		String apkDecodeBasePath = basePath;
+		String apkDecodePath = mWorkPath;
 
 		File androidManifestFile = new File(Utils.linkPath(apkDecodeBasePath, "AndroidManifest.xml"));
 		if (androidManifestFile.exists()) {

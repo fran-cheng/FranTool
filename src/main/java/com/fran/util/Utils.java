@@ -224,4 +224,15 @@ public class Utils {
 		}
 	}
 
+	public static void delDir(File file) {
+		if (file.isDirectory()) {
+			File[] list = file.listFiles();
+			assert list != null;
+			for (File f : list) {
+				delDir(f);
+			}
+		}
+		file.delete();
+	}
+
 }
