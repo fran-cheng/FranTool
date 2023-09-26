@@ -49,6 +49,8 @@ public class Apk2Aab {
 		if (classPath.endsWith(".jar")) {
 			File jarFile = new File(classPath);
 			mRootPath = jarFile.getParent();
+		} else {
+			mRootPath = "D:\\FranGitHub\\FranTool\\tool";
 		}
 		mApkDecodePath = apkDecodePath;
 		mWorkPath = Utils.linkPath(apkDecodePath, "fran_aab_work");
@@ -106,32 +108,17 @@ public class Apk2Aab {
 			throw new RuntimeException(dir + " 无签名文件！");
 		}
 		String name = new File(dir).getName();
-		String out = Utils.linkPath(dir, name + "_sign.aab");
+		String outSignAab = Utils.linkPath(dir, name + "_sign.aab");
 
 		String keystorefile = info[0];
 		String password = info[1];
 
 
-		String s = null;
-		try {
-			s = "jarsigner -keystore " + new File(keystorefile).toURI().toURL() +
-							" -storepass " + password + " -sigalg MD5withRSA -digestalg SHA1 -signedjar " + out + " " + outPutAabPath +
-							" " + info[2];
-			Utils.logInfo("Sign:" + s);
-		} catch (MalformedURLException e) {
-			e.printStackTrace();
-		}
+		String s = String.format("jarsigner -keystore %s -storepass %s -sigalg MD5withRSA -digestalg SHA1 -signedjar %s %s %s", keystorefile, password, outPutAabPath, outSignAab, info[2]);
+
 		RuntimeHelper.getInstance().run(s);
 
-//		String cmdSigne = String.format("jarsigner -digestalg SHA1 -sigalg SHA1withRSA -keystore %s -storepass %s -keypass %s %s ", keystorefile, password, outPutAabPath, out);
-//
-//		try {
-//			RuntimeHelper.getInstance().run(cmdSigne);
-//		} catch (Exception e) {
-//			e.printStackTrace();
-//		}
-
-
+		Utils.delDir(new File(mWorkPath));
 	}
 
 	private String[] findSignInfo(File dir, String fn) {
