@@ -3,9 +3,11 @@ package com.fran.aab;
 import com.fran.util.RuntimeHelper;
 import com.fran.util.Utils;
 
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
+import java.io.FileReader;
 import java.io.IOException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
@@ -13,6 +15,8 @@ import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
 
+import brut.androlib.apk.ApkInfo;
+import brut.androlib.exceptions.AndrolibException;
 import brut.common.BrutException;
 import brut.util.AaptManager;
 
@@ -151,10 +155,24 @@ public class Apk2Aab {
 		String outBaseApk = Utils.linkPath(mWorkPath, "base.apk");
 		String aaptPath = getAapt2Path();
 		String androidJarPath = "D:\\FranGitHub\\FranTool\\tool\\aab-tool\\android.jar";
-		String minVersion = "24";
-		String targetVersion = "31";
-		String versionCode = "1";
-		String versionName = "1.0.0";
+
+		String minVersion = "21";
+		String targetVersion = "33";
+		String versionCode = "14";
+		String versionName = "1.14";
+
+		String ymlPath = Utils.linkPath(mApkDecodePath, "apktool.yml");
+		File ymlFile = new File(ymlPath);
+		try {
+			ApkInfo apkInfo = ApkInfo.load(ymlFile);
+			minVersion = apkInfo.getMinSdkVersion();
+			targetVersion = apkInfo.getTargetSdkVersion();
+			versionCode = apkInfo.versionInfo.versionCode;
+			versionName =  apkInfo.versionInfo.versionName;
+		} catch (AndrolibException e) {
+			throw new RuntimeException(e);
+		}
+
 
 		String cmdLink = String.format("%s link --proto-format -o %s -I %s --min-sdk-version %s --target-sdk-version %s --version-code %s --version-name %s --manifest %s -R %s --auto-add-overlay",
 						aaptPath, outBaseApk, androidJarPath, minVersion, targetVersion, versionCode, versionName, Utils.linkPath(mApkDecodePath, "AndroidManifest.xml"), compileFIlePath);
