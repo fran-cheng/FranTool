@@ -31,7 +31,10 @@ public class Apk2Aab {
 
 		Apk2Aab aab = new Apk2Aab("D:\\FranGitHub\\FranTool\\runtime\\20230922-X2-gf");
 		aab.process();
+
+//		Utils.copyFiles(new File("D:\\FranGitHub\\FranTool\\runtime\\20230922-X2-gf\\fran_base_work\\base\\AndroidManifest.xml"), new File(Utils.linkPath("D:\\FranGitHub\\FranTool\\runtime\\20230922-X2-gf\\fran_base_work\\base", "manifest", "AndroidManifest.xml")));
 	}
+
 
 	/**
 	 * 构造方法
@@ -180,7 +183,14 @@ public class Apk2Aab {
 			ZipEntry zipEntry = zis.getNextEntry();
 			while (zipEntry != null) {
 				String fileName = zipEntry.getName();
-				File newFile = new File(destDirectory + File.separator + fileName);
+				File newFile;
+				if (fileName.endsWith("AndroidManifest.xml")) {
+					newFile = new File(Utils.linkPath(destDirectory, "manifest", fileName));
+				} else {
+					newFile = new File(destDirectory + File.separator + fileName);
+				}
+
+
 				// 创建目录
 				new File(newFile.getParent()).mkdirs();
 				FileOutputStream fos = new FileOutputStream(newFile);
@@ -210,12 +220,6 @@ public class Apk2Aab {
 
 		String apkDecodeBasePath = basePath;
 		String apkDecodePath = mApkDecodePath;
-
-		File androidManifestFile = new File(Utils.linkPath(apkDecodeBasePath, "AndroidManifest.xml"));
-		if (androidManifestFile.exists()) {
-			Utils.copyFiles(androidManifestFile, new File(Utils.linkPath(apkDecodeBasePath, "manifest", "AndroidManifest.xml")));
-			androidManifestFile.delete();
-		}
 
 		File assetsFile = new File(Utils.linkPath(apkDecodePath, "assets"));
 		if (assetsFile.exists()) {

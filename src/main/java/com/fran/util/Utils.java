@@ -227,7 +227,7 @@ public class Utils {
 	private static void copyOperation(File tempFile, File outPutFile) {
 		try (FileReader fileReader = new FileReader(tempFile,StandardCharsets.UTF_8);
 			 FileWriter fileWriter = new FileWriter(outPutFile,StandardCharsets.UTF_8)) {
-			char[] chars = new char[1024];
+			char[] chars = new char[4096];
 			int length;
 			while ((length = fileReader.read(chars)) != -1) {
 				fileWriter.write(chars, 0, length);
