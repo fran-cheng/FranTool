@@ -225,15 +225,14 @@ public class Utils {
 	 * @param outPutFile 输出
 	 */
 	private static void copyOperation(File tempFile, File outPutFile) {
-		try (FileReader fileReader = new FileReader(tempFile,StandardCharsets.UTF_8);
-			 FileWriter fileWriter = new FileWriter(outPutFile,StandardCharsets.UTF_8)) {
-			char[] chars = new char[4096];
-			int length;
-			while ((length = fileReader.read(chars)) != -1) {
-				fileWriter.write(chars, 0, length);
-			}
-			fileWriter.flush();
+		try (FileInputStream fis = new FileInputStream(tempFile);
+			 FileOutputStream fos = new FileOutputStream(outPutFile)) {
 
+			byte[] buffer = new byte[1024];
+			int bytesRead;
+			while ((bytesRead = fis.read(buffer)) != -1) {
+				fos.write(buffer, 0, bytesRead);
+			}
 		} catch (IOException e) {
 			e.printStackTrace();
 		}
