@@ -5,6 +5,7 @@ import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Objects;
 import java.util.Scanner;
 
 /**
@@ -203,13 +204,27 @@ public class Utils {
 		return stringBuilder.toString();
 	}
 
+	public static void copyFiles(File tempFile, File outPutFile) {
+
+		if (tempFile.isDirectory()) {
+			for (File file : Objects.requireNonNull(tempFile.listFiles())) {
+				copyFiles(file, new File(outPutFile, file.getName()));
+			}
+		} else {
+			if (!outPutFile.getParentFile().exists()) {
+				outPutFile.getParentFile().mkdirs();
+			}
+			copyOperation(tempFile, outPutFile);
+		}
+	}
+
 	/**
 	 * 拷贝的具体操作
 	 *
 	 * @param tempFile   输入
 	 * @param outPutFile 输出
 	 */
-	public static void copyOperation(File tempFile, File outPutFile) {
+	private static void copyOperation(File tempFile, File outPutFile) {
 		try (FileReader fileReader = new FileReader(tempFile);
 			 FileWriter fileWriter = new FileWriter(outPutFile)) {
 			char[] chars = new char[1024];

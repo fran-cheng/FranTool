@@ -3,22 +3,16 @@ package com.fran.aab;
 import com.fran.util.RuntimeHelper;
 import com.fran.util.Utils;
 
-import org.apache.commons.io.FileUtils;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
-import java.io.InputStream;
-import java.net.URL;
-import java.util.jar.JarFile;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
+import java.util.zip.ZipOutputStream;
 
-import brut.androlib.Config;
 import brut.common.BrutException;
 import brut.util.AaptManager;
-import brut.util.Jar;
 
 /**
  * @author 程良明
@@ -57,9 +51,68 @@ public class Apk2Aab {
 //		String baseApkPath = linkSources(compileFIlePath);
 //		String basePath = unZipBase(baseApkPath);
 //		copySources(basePath);
-		copySources("D:\\FranGitHub\\FranTool\\runtime\\20230922-X2-gf\\fran_base_work\\base");
+//		copySources("D:\\FranGitHub\\FranTool\\runtime\\20230922-X2-gf\\fran_base_work\\base");
+		generateAAB("D:\\FranGitHub\\FranTool\\runtime\\20230922-X2-gf\\fran_base_work\\base");
 	}
 
+	private void generateAAB(String baseUnZipPath) {
+		String bundleToolPath = "D:\\FranGitHub\\FranTool\\tool\\aab-tool\\bundletool.jar";
+		String outPutAabPath = "D:\\FranGitHub\\FranTool\\runtime\\20230922-X2-gf\\fran_base_work\\base.aab";
+		File baseZipFile = new File(Utils.linkPath(mWorkPath, "base.zip"));
+		try {
+			FileOutputStream fos = new FileOutputStream(baseZipFile);
+			ZipOutputStream zipOut = new ZipOutputStream(fos);
+			File[] fileToZip = new File(baseUnZipPath).listFiles();
+
+			assert fileToZip != null;
+			for (File file : fileToZip) {
+				zipFile(file, file.getName(), zipOut);
+			}
+
+
+			zipOut.close();
+			fos.close();
+
+			System.out.println("文件压缩成功！");
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+
+
+		String cmd = String.format("java -jar %s build-bundle --modules=%s --output=%s", bundleToolPath, baseZipFile.getPath(), outPutAabPath);
+
+		try {
+			RuntimeHelper.getInstance().run(cmd);
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+	}
+
+	private static void zipFile(File fileToZip, String fileName, ZipOutputStream zipOut) throws IOException {
+		if (fileToZip.isHidden()) {
+			return;
+		}
+		if (fileToZip.isDirectory()) {
+			File[] children = fileToZip.listFiles();
+			for (File childFile : children) {
+				zipFile(childFile, fileName + "/" + childFile.getName(), zipOut);
+			}
+			return;
+		}
+
+		FileInputStream fis = new FileInputStream(fileToZip);
+		ZipEntry zipEntry = new ZipEntry(fileName);
+		zipOut.putNextEntry(zipEntry);
+
+		byte[] bytes = new byte[4096];
+		int length;
+		while ((length = fis.read(bytes)) >= 0) {
+			zipOut.write(bytes, 0, length);
+		}
+
+		fis.close();
+	}
 
 	private String getAapt2Path() {
 		try {
@@ -153,35 +206,51 @@ public class Apk2Aab {
 	 */
 	private void copySources(String basePath) throws IOException {
 
-		// TODO: 2023/9/25 完成文件copy操作
 		String apkDecodeBasePath = basePath;
-		String apkDecodePath = mWorkPath;
+		String apkDecodePath = mApkDecodePath;
 
 		File androidManifestFile = new File(Utils.linkPath(apkDecodeBasePath, "AndroidManifest.xml"));
 		if (androidManifestFile.exists()) {
-			Utils.copyOperation(androidManifestFile, new File(Utils.linkPath(apkDecodeBasePath, "manifest", "AndroidManifest.xml")));
+			Utils.copyFiles(androidManifestFile, new File(Utils.linkPath(apkDecodeBasePath, "manifest", "AndroidManifest.xml")));
+			androidManifestFile.delete();
 		}
 
 		File assetsFile = new File(Utils.linkPath(apkDecodePath, "assets"));
 		if (assetsFile.exists()) {
-			Utils.copyOperation(assetsFile, new File(Utils.linkPath(apkDecodeBasePath, "assets")));
+			Utils.copyFiles(assetsFile, new File(Utils.linkPath(apkDecodeBasePath, "assets")));
 		}
 
 		File libFile = new File(Utils.linkPath(apkDecodePath, "lib"));
 		if (libFile.exists()) {
-			Utils.copyOperation(libFile, new File(Utils.linkPath(apkDecodeBasePath, "lib")));
+			Utils.copyFiles(libFile, new File(Utils.linkPath(apkDecodeBasePath, "lib")));
 		}
 
 		File unknownFile = new File(Utils.linkPath(apkDecodePath, "unknown"));
 		if (unknownFile.exists()) {
-			Utils.copyOperation(unknownFile, new File(Utils.linkPath(apkDecodeBasePath, "root")));
+			Utils.copyFiles(unknownFile, new File(Utils.linkPath(apkDecodeBasePath, "root", "unknown")));
 		}
 
 
 		File kotlinFile = new File(Utils.linkPath(apkDecodePath, "kotlin"));
 		if (kotlinFile.exists()) {
-			Utils.copyOperation(kotlinFile, new File(Utils.linkPath(apkDecodeBasePath, "root")));
+			Utils.copyFiles(kotlinFile, new File(Utils.linkPath(apkDecodeBasePath, "root", "kotlin")));
 		}
 
+
+		File buildFile = new File(Utils.linkPath(apkDecodePath, "build", "apk"));
+		if (!buildFile.exists()) {
+			String cmd = String.format("apktool b %s", apkDecodePath);
+
+			try {
+				RuntimeHelper.getInstance().run(cmd);
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}
+
+		File[] dexFiles = buildFile.listFiles((file1, s) -> s.startsWith("classes") && s.endsWith(".dex"));
+		for (File dexFile : dexFiles) {
+			Utils.copyFiles(dexFile, new File(Utils.linkPath(apkDecodeBasePath, "dex")));
+		}
 	}
 }
