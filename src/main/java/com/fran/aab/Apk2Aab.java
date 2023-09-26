@@ -61,6 +61,22 @@ public class Apk2Aab {
 		workFile.mkdirs();
 	}
 
+	public void installAab(String aabFilePath) {
+		String bundleToolPath = Utils.linkPath(mRootPath, "aab-tool", "bundletool.jar");
+		File aabFile = new File(aabFilePath);
+		String apksPath = Utils.linkPath(mWorkPath, aabFile.getName(), ".apks");
+		String cmdApks = String.format("java -jar %s build-apks --bundle=%s --output=%s", bundleToolPath, aabFilePath, apksPath);
+
+
+		RuntimeHelper.getInstance().run(cmdApks);
+
+//		安装apk
+		String cmdInstallApks = String.format("java -jar %s install-apks --apks=%s", bundleToolPath, apksPath);
+
+		RuntimeHelper.getInstance().run(cmdInstallApks);
+		// TODO: 2023/9/26 有空的话， 先adb devices 查询，然后如果有多个的话，就选择安装？
+	}
+
 	public void process() throws IOException {
 		String compileFIlePath = compile();
 		String baseApkPath = linkSources(compileFIlePath);
@@ -94,13 +110,7 @@ public class Apk2Aab {
 
 
 		String cmd = String.format("java -jar %s build-bundle --modules=%s --output=%s", bundleToolPath, baseZipFile.getPath(), outPutAabPath);
-
-		try {
-			RuntimeHelper.getInstance().run(cmd);
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
-
+		RuntimeHelper.getInstance().run(cmd);
 
 		String dir = mApkDecodePath;
 		String[] info = findSignInfo(new File(dir), "key.keystore");
