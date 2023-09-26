@@ -7,6 +7,8 @@ import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
@@ -41,18 +43,19 @@ public class Apk2Aab {
 		mWorkPath = Utils.linkPath(apkDecodePath, "fran_base_work");
 		File workFile = new File(mWorkPath);
 		if (workFile.exists()) {
-//			Utils.delDir(workFile);
+			Utils.delDir(workFile);
 		}
 		workFile.mkdirs();
 	}
 
 	public void process() throws IOException {
-//		String compileFIlePath = compile();
-//		String baseApkPath = linkSources(compileFIlePath);
-//		String basePath = unZipBase(baseApkPath);
-//		copySources(basePath);
+		String compileFIlePath = compile();
+		String baseApkPath = linkSources(compileFIlePath);
+		String basePath = unZipBase(baseApkPath);
+		copySources(basePath);
+		generateAAB(basePath);
 //		copySources("D:\\FranGitHub\\FranTool\\runtime\\20230922-X2-gf\\fran_base_work\\base");
-		generateAAB("D:\\FranGitHub\\FranTool\\runtime\\20230922-X2-gf\\fran_base_work\\base");
+//		generateAAB("D:\\FranGitHub\\FranTool\\runtime\\20230922-X2-gf\\fran_base_work\\base");
 	}
 
 	private void generateAAB(String baseUnZipPath) {
@@ -61,7 +64,7 @@ public class Apk2Aab {
 		File baseZipFile = new File(Utils.linkPath(mWorkPath, "base.zip"));
 		try {
 			FileOutputStream fos = new FileOutputStream(baseZipFile);
-			ZipOutputStream zipOut = new ZipOutputStream(fos);
+			ZipOutputStream zipOut = new ZipOutputStream(fos, StandardCharsets.UTF_8);
 			File[] fileToZip = new File(baseUnZipPath).listFiles();
 
 			assert fileToZip != null;
@@ -144,7 +147,6 @@ public class Apk2Aab {
 	private String linkSources(String compileFIlePath) {
 		String outBaseApk = Utils.linkPath(mWorkPath, "base.apk");
 		String aaptPath = getAapt2Path();
-		// TODO: 2023/9/25 读取apktool的yaml获取
 		String androidJarPath = "D:\\FranGitHub\\FranTool\\tool\\aab-tool\\android.jar";
 		String minVersion = "24";
 		String targetVersion = "31";
@@ -170,11 +172,11 @@ public class Apk2Aab {
 	private String unZipBase(String apkFilePath) {
 
 		String destDirectory = Utils.linkPath(mWorkPath, "base");
-		byte[] buffer = new byte[1024];
+		byte[] buffer = new byte[4096];
 		try {
 			// 创建解压缩输入流
 			FileInputStream fis = new FileInputStream(apkFilePath);
-			ZipInputStream zis = new ZipInputStream(fis);
+			ZipInputStream zis = new ZipInputStream(fis, StandardCharsets.UTF_8);
 			ZipEntry zipEntry = zis.getNextEntry();
 			while (zipEntry != null) {
 				String fileName = zipEntry.getName();
@@ -250,7 +252,7 @@ public class Apk2Aab {
 
 		File[] dexFiles = buildFile.listFiles((file1, s) -> s.startsWith("classes") && s.endsWith(".dex"));
 		for (File dexFile : dexFiles) {
-			Utils.copyFiles(dexFile, new File(Utils.linkPath(apkDecodeBasePath, "dex")));
+			Utils.copyFiles(dexFile, new File(Utils.linkPath(apkDecodeBasePath, "dex", dexFile.getName())));
 		}
 	}
 }
