@@ -124,11 +124,11 @@ public class Apk2Aab {
 		String password = info[1];
 
 
-		String s = String.format("jarsigner -keystore %s -storepass %s -sigalg MD5withRSA -digestalg SHA1 -signedjar %s %s %s", keystorefile, password, outPutAabPath, outSignAab, info[2]);
+		String s = String.format("jarsigner -keystore %s -storepass %s -sigalg MD5withRSA -digestalg SHA1 -signedjar %s %s %s", keystorefile, password, outSignAab, outPutAabPath, info[2]);
 
 		RuntimeHelper.getInstance().run(s);
 
-		Utils.delDir(new File(mWorkPath));
+//		Utils.delDir(new File(mWorkPath));
 	}
 
 	private String[] findSignInfo(File dir, String fn) {
