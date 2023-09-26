@@ -9,6 +9,7 @@ import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.FileReader;
 import java.io.IOException;
+import java.net.MalformedURLException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
 import java.util.zip.ZipEntry;
@@ -33,7 +34,7 @@ public class Apk2Aab {
 
 	public static void main(String[] args) throws IOException {
 
-		Apk2Aab aab = new Apk2Aab("D:\\FranGitHub\\FranTool\\runtime\\20230922-X2-gf");
+		Apk2Aab aab = new Apk2Aab("D:\\FranGitHub\\FranTool\\runtime\\app-debug");
 		aab.process();
 
 //		Utils.copyFiles(new File("D:\\FranGitHub\\FranTool\\runtime\\20230922-X2-gf\\fran_base_work\\base\\AndroidManifest.xml"), new File(Utils.linkPath("D:\\FranGitHub\\FranTool\\runtime\\20230922-X2-gf\\fran_base_work\\base", "manifest", "AndroidManifest.xml")));
@@ -67,7 +68,7 @@ public class Apk2Aab {
 
 	private void generateAAB(String baseUnZipPath) {
 		String bundleToolPath = "D:\\FranGitHub\\FranTool\\tool\\aab-tool\\bundletool.jar";
-		String outPutAabPath = "D:\\FranGitHub\\FranTool\\runtime\\20230922-X2-gf\\fran_base_work\\base.aab";
+		String outPutAabPath = Utils.linkPath(mWorkPath,"base.aab");
 		File baseZipFile = new File(Utils.linkPath(mWorkPath, "base.zip"));
 		try {
 			FileOutputStream fos = new FileOutputStream(baseZipFile);
@@ -97,6 +98,61 @@ public class Apk2Aab {
 			e.printStackTrace();
 		}
 
+
+		String dir = mApkDecodePath;
+		String[] info = findSignInfo(new File(dir), "key.keystore");
+		if (info == null) {
+			throw new RuntimeException(dir + " 无签名文件！");
+		}
+		String name = new File(dir).getName();
+		String out = Utils.linkPath(dir, name + "_sign.aab");
+
+		String keystorefile = info[0];
+		String password = info[1];
+
+
+		String s = null;
+		try {
+			s = "jarsigner -keystore " + new File(keystorefile).toURI().toURL() +
+							" -storepass " + password + " -sigalg MD5withRSA -digestalg SHA1 -signedjar " + out + " " + outPutAabPath +
+							" " + info[2];
+			Utils.logInfo("Sign:" + s);
+		} catch (MalformedURLException e) {
+			e.printStackTrace();
+		}
+		RuntimeHelper.getInstance().run(s);
+
+//		String cmdSigne = String.format("jarsigner -digestalg SHA1 -sigalg SHA1withRSA -keystore %s -storepass %s -keypass %s %s ", keystorefile, password, outPutAabPath, out);
+//
+//		try {
+//			RuntimeHelper.getInstance().run(cmdSigne);
+//		} catch (Exception e) {
+//			e.printStackTrace();
+//		}
+
+
+	}
+
+	private String[] findSignInfo(File dir, String fn) {
+		File f = new File(dir.getAbsolutePath(), fn);
+		while (!f.exists()) {
+			dir = dir.getParentFile();
+			if (dir == null) {
+				f = null;
+				break;
+			}
+			f = new File(dir.getAbsolutePath(), fn);
+		}
+		if (f != null) {
+			File passf = new File(dir, "password.ini");
+			if (!passf.exists() || passf.isDirectory()) {
+				throw new RuntimeException("password.ini NOT FOUND!");
+			}
+			String[] passinfo = Utils.read(passf).split(";");
+			// keystore file path, password
+			return new String[]{f.getAbsolutePath(), passinfo[0], passinfo[1]};
+		}
+		return null;
 	}
 
 	private static void zipFile(File fileToZip, String fileName, ZipOutputStream zipOut) throws IOException {
@@ -158,17 +214,16 @@ public class Apk2Aab {
 
 		String minVersion = "21";
 		String targetVersion = "33";
-		String versionCode = "14";
-		String versionName = "1.14";
+		String versionCode = "1";
+		String versionName = "1.0";
 
-		String ymlPath = Utils.linkPath(mApkDecodePath, "apktool.yml");
-		File ymlFile = new File(ymlPath);
+		File apkdecodeFile = new File(mApkDecodePath);
 		try {
-			ApkInfo apkInfo = ApkInfo.load(ymlFile);
+			ApkInfo apkInfo = ApkInfo.load(apkdecodeFile);
 			minVersion = apkInfo.getMinSdkVersion();
 			targetVersion = apkInfo.getTargetSdkVersion();
 			versionCode = apkInfo.versionInfo.versionCode;
-			versionName =  apkInfo.versionInfo.versionName;
+			versionName = apkInfo.versionInfo.versionName;
 		} catch (AndrolibException e) {
 			throw new RuntimeException(e);
 		}
@@ -251,7 +306,7 @@ public class Apk2Aab {
 
 		File unknownFile = new File(Utils.linkPath(apkDecodePath, "unknown"));
 		if (unknownFile.exists()) {
-			Utils.copyFiles(unknownFile, new File(Utils.linkPath(apkDecodeBasePath, "root", "unknown")));
+			Utils.copyFiles(unknownFile, new File(Utils.linkPath(apkDecodeBasePath, "root")));
 		}
 
 
