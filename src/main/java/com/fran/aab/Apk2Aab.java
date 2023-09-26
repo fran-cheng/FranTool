@@ -31,13 +31,11 @@ import brut.util.AaptManager;
 public class Apk2Aab {
 	private final String mApkDecodePath;
 	private final String mWorkPath;
+	private String mRootPath;
 
 	public static void main(String[] args) throws IOException {
-
 		Apk2Aab aab = new Apk2Aab("D:\\FranGitHub\\FranTool\\runtime\\app-debug");
 		aab.process();
-
-//		Utils.copyFiles(new File("D:\\FranGitHub\\FranTool\\runtime\\20230922-X2-gf\\fran_base_work\\base\\AndroidManifest.xml"), new File(Utils.linkPath("D:\\FranGitHub\\FranTool\\runtime\\20230922-X2-gf\\fran_base_work\\base", "manifest", "AndroidManifest.xml")));
 	}
 
 
@@ -47,8 +45,13 @@ public class Apk2Aab {
 	 * @param apkDecodePath apktool解包后的文件路径
 	 */
 	public Apk2Aab(String apkDecodePath) {
+		String classPath = this.getClass().getProtectionDomain().getCodeSource().getLocation().getPath();
+		if (classPath.endsWith(".jar")) {
+			File jarFile = new File(classPath);
+			mRootPath = jarFile.getParent();
+		}
 		mApkDecodePath = apkDecodePath;
-		mWorkPath = Utils.linkPath(apkDecodePath, "fran_base_work");
+		mWorkPath = Utils.linkPath(apkDecodePath, "fran_aab_work");
 		File workFile = new File(mWorkPath);
 		if (workFile.exists()) {
 			Utils.delDir(workFile);
@@ -62,13 +65,11 @@ public class Apk2Aab {
 		String basePath = unZipBase(baseApkPath);
 		copySources(basePath);
 		generateAAB(basePath);
-//		copySources("D:\\FranGitHub\\FranTool\\runtime\\20230922-X2-gf\\fran_base_work\\base");
-//		generateAAB("D:\\FranGitHub\\FranTool\\runtime\\20230922-X2-gf\\fran_base_work\\base");
 	}
 
 	private void generateAAB(String baseUnZipPath) {
-		String bundleToolPath = "D:\\FranGitHub\\FranTool\\tool\\aab-tool\\bundletool.jar";
-		String outPutAabPath = Utils.linkPath(mWorkPath,"base.aab");
+		String bundleToolPath = Utils.linkPath(mRootPath, "aab-tool", "bundletool.jar");
+		String outPutAabPath = Utils.linkPath(mWorkPath, "base.aab");
 		File baseZipFile = new File(Utils.linkPath(mWorkPath, "base.zip"));
 		try {
 			FileOutputStream fos = new FileOutputStream(baseZipFile);
@@ -210,7 +211,7 @@ public class Apk2Aab {
 	private String linkSources(String compileFIlePath) {
 		String outBaseApk = Utils.linkPath(mWorkPath, "base.apk");
 		String aaptPath = getAapt2Path();
-		String androidJarPath = "D:\\FranGitHub\\FranTool\\tool\\aab-tool\\android.jar";
+		String androidJarPath = Utils.linkPath(mRootPath, "aab-tool", "android.jar");
 
 		String minVersion = "21";
 		String targetVersion = "33";
