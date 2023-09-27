@@ -67,18 +67,21 @@ public class Apk2Aab {
 	public void installAab(String aabFilePath) {
 		String bundleToolPath = Utils.linkPath(mRootPath, "aab-tool", "bundletool.jar");
 		File aabFile = new File(aabFilePath);
-		String apksPath = Utils.linkPath(mWorkPath, aabFile.getName() + ".apks");
-		String[] key = KeyTool.findSignInfo(aabFile.getParentFile(), false);
-		String cmdApks;
-		if (key == null) {
-			cmdApks = String.format("java -jar %s build-apks --bundle=%s --output=%s", bundleToolPath, aabFilePath, apksPath);
-		} else {
-			cmdApks = String.format("java -jar %s build-apks --bundle=%s --output=%s --ks=%s --ks-key-alias=%s --ks-pass=pass:%s --key-pass=pass:%s", bundleToolPath, aabFilePath, apksPath, key[0], key[2], key[1], key[1]);
-		}
+		String apksPath = Utils.linkPath(aabFile.getParent(), aabFile.getName().replace(".aab", "") + ".apks");
+		if (!new File(apksPath).exists()) {
+			String[] key = KeyTool.findSignInfo(aabFile.getParentFile(), false);
+			String cmdApks;
+			if (key == null) {
+				cmdApks = String.format("java -jar %s build-apks --bundle=%s --output=%s", bundleToolPath, aabFilePath, apksPath);
+			} else {
+				cmdApks = String.format("java -jar %s build-apks --bundle=%s --output=%s --ks=%s --ks-key-alias=%s --ks-pass=pass:%s --key-pass=pass:%s", bundleToolPath, aabFilePath, apksPath, key[0], key[2], key[1], key[1]);
+			}
 
 
 //		生成apks
-		RuntimeHelper.getInstance().run(cmdApks);
+			RuntimeHelper.getInstance().run(cmdApks);
+		}
+
 
 		String adbCmd = "adb devices";
 
@@ -106,7 +109,7 @@ public class Apk2Aab {
 			Utils.log("正在安装的设备是 : " + deviceName);
 
 			//		安装apk
-			String cmdInstallApks = String.format("java -jar %s install-apks --apks=%s --device-id==%s", bundleToolPath, apksPath, deviceName);
+			String cmdInstallApks = String.format("java -jar %s install-apks --apks=%s --device-id=%s", bundleToolPath, apksPath, deviceName);
 
 			RuntimeHelper.getInstance().run(cmdInstallApks);
 		}
