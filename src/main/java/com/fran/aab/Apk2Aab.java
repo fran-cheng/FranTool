@@ -1,5 +1,6 @@
 package com.fran.aab;
 
+import com.fran.tool.KeyTool;
 import com.fran.util.RuntimeHelper;
 import com.fran.util.Utils;
 
@@ -12,6 +13,7 @@ import java.io.IOException;
 import java.net.MalformedURLException;
 import java.nio.charset.Charset;
 import java.nio.charset.StandardCharsets;
+import java.util.Scanner;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
 import java.util.zip.ZipOutputStream;
@@ -35,7 +37,8 @@ public class Apk2Aab {
 
 	public static void main(String[] args) throws IOException {
 		Apk2Aab aab = new Apk2Aab("D:\\FranGitHub\\FranTool\\runtime\\app-debug");
-		aab.process();
+//		aab.process();
+		aab.installAab("D:\\FranGitHub\\FranTool\\runtime\\app-debug");
 	}
 
 
@@ -64,17 +67,53 @@ public class Apk2Aab {
 	public void installAab(String aabFilePath) {
 		String bundleToolPath = Utils.linkPath(mRootPath, "aab-tool", "bundletool.jar");
 		File aabFile = new File(aabFilePath);
-		String apksPath = Utils.linkPath(mWorkPath, aabFile.getName(), ".apks");
-		String cmdApks = String.format("java -jar %s build-apks --bundle=%s --output=%s", bundleToolPath, aabFilePath, apksPath);
+		String apksPath = Utils.linkPath(mWorkPath, aabFile.getName() + ".apks");
+		String[] key = KeyTool.findSignInfo(aabFile.getParentFile(), false);
+		String cmdApks;
+		if (key == null) {
+			cmdApks = String.format("java -jar %s build-apks --bundle=%s --output=%s", bundleToolPath, aabFilePath, apksPath);
+		} else {
+			cmdApks = String.format("java -jar %s build-apks --bundle=%s --output=%s --ks=%s --ks-key-alias=%s --ks-pass=pass:%s --key-pass=pass:%s", bundleToolPath, aabFilePath, apksPath, key[0], key[2], key[1], key[1]);
+		}
 
 
+//		生成apks
 		RuntimeHelper.getInstance().run(cmdApks);
 
 //		安装apk
-		String cmdInstallApks = String.format("java -jar %s install-apks --apks=%s", bundleToolPath, apksPath);
+//		String cmdInstallApks = String.format("java -jar %s install-apks --apks=%s", bundleToolPath, apksPath);
 
-		RuntimeHelper.getInstance().run(cmdInstallApks);
+//		RuntimeHelper.getInstance().run(cmdInstallApks);
 		// TODO: 2023/9/26 有空的话， 先adb devices 查询，然后如果有多个的话，就选择安装？
+
+
+		String cmdInstallApks = String.format("adb devices");
+
+		String devices = RuntimeHelper.getInstance().run(cmdInstallApks);
+		String[] deviceList = devices.split("\n");
+		if (deviceList.length < 2) {
+			Utils.log("请先链接设备");
+		} else {
+			//			默认第一个
+			String deviceName = deviceList[1];
+			if (deviceList.length > 2) {
+				Utils.log("请先选择要安装的设备id或者名称");
+
+				String str = new Scanner(System.in).next();
+
+				try {
+					int index = Integer.parseInt(str);
+					deviceName = deviceList[index].replace("device", "").trim();
+				} catch (Exception ignored) {
+					deviceName = str;
+				}
+			}
+			System.out.println("clm 选中的设备是 : " + deviceName);
+
+			// TODO: 2023/9/27 直接安装
+		}
+
+
 	}
 
 	public void process() throws IOException {
@@ -113,10 +152,7 @@ public class Apk2Aab {
 		RuntimeHelper.getInstance().run(cmd);
 
 		String dir = mApkDecodePath;
-		String[] info = findSignInfo(new File(dir), "key.keystore");
-		if (info == null) {
-			throw new RuntimeException(dir + " 无签名文件！");
-		}
+		String[] info = KeyTool.findSignInfo(new File(dir));
 		String name = new File(dir).getName();
 		String outSignAab = Utils.linkPath(dir, name + "_sign.aab");
 
@@ -131,27 +167,6 @@ public class Apk2Aab {
 //		Utils.delDir(new File(mWorkPath));
 	}
 
-	private String[] findSignInfo(File dir, String fn) {
-		File f = new File(dir.getAbsolutePath(), fn);
-		while (!f.exists()) {
-			dir = dir.getParentFile();
-			if (dir == null) {
-				f = null;
-				break;
-			}
-			f = new File(dir.getAbsolutePath(), fn);
-		}
-		if (f != null) {
-			File passf = new File(dir, "password.ini");
-			if (!passf.exists() || passf.isDirectory()) {
-				throw new RuntimeException("password.ini NOT FOUND!");
-			}
-			String[] passinfo = Utils.read(passf).split(";");
-			// keystore file path, password
-			return new String[]{f.getAbsolutePath(), passinfo[0], passinfo[1]};
-		}
-		return null;
-	}
 
 	private static void zipFile(File fileToZip, String fileName, ZipOutputStream zipOut) throws IOException {
 		if (fileToZip.isHidden()) {
