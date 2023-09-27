@@ -80,37 +80,35 @@ public class Apk2Aab {
 //		生成apks
 		RuntimeHelper.getInstance().run(cmdApks);
 
-//		安装apk
-//		String cmdInstallApks = String.format("java -jar %s install-apks --apks=%s", bundleToolPath, apksPath);
+		String adbCmd = "adb devices";
 
-//		RuntimeHelper.getInstance().run(cmdInstallApks);
-		// TODO: 2023/9/26 有空的话， 先adb devices 查询，然后如果有多个的话，就选择安装？
-
-
-		String cmdInstallApks = String.format("adb devices");
-
-		String devices = RuntimeHelper.getInstance().run(cmdInstallApks);
+		String devices = RuntimeHelper.getInstance().run(adbCmd);
 		String[] deviceList = devices.split("\n");
 		if (deviceList.length < 2) {
 			Utils.log("请先链接设备");
 		} else {
 			//			默认第一个
-			String deviceName = deviceList[1];
+			String deviceName = deviceList[1].replace("device", "").trim();
 			if (deviceList.length > 2) {
 				Utils.log("请先选择要安装的设备id或者名称");
-
 				String str = new Scanner(System.in).next();
-
 				try {
 					int index = Integer.parseInt(str);
 					deviceName = deviceList[index].replace("device", "").trim();
 				} catch (Exception ignored) {
-					deviceName = str;
+					if (devices.contains(str)) {
+						deviceName = str;
+					} else {
+						Utils.log("输入有误，选择默认的设备 : " + deviceName);
+					}
 				}
 			}
-			System.out.println("clm 选中的设备是 : " + deviceName);
+			Utils.log("正在安装的设备是 : " + deviceName);
 
-			// TODO: 2023/9/27 直接安装
+			//		安装apk
+			String cmdInstallApks = String.format("java -jar %s install-apks --apks=%s --device-id==%s", bundleToolPath, apksPath, deviceName);
+
+			RuntimeHelper.getInstance().run(cmdInstallApks);
 		}
 
 
