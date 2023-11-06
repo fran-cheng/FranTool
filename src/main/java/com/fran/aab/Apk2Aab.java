@@ -151,14 +151,12 @@ public class Apk2Aab {
      */
     public void process() throws DocumentException {
         // TODO: 2023/11/6 从目录读取yaml，或者允许从命令行输入
+
         List<File> padZipList = new ArrayList<>();
         //        生成pad的  跟目录名字
         mPadFileNames = new String[]{"init_pack"};
 //        assets下的  文件名
         mPadAssetsRegs = new String[]{"ab"};
-
-        Map<String, String> map = new HashMap<>();
-
 
         String compileFilePath = compile();
 
