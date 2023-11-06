@@ -212,7 +212,9 @@ public class Apk2Aab {
 
             assert fileToZip != null;
             for (File file : fileToZip) {
-                zipFile(file, file.getName(), zipOut);
+                if (!"resources.pb".equals(file.getName())) {
+                    zipFile(file, file.getName(), zipOut);
+                }
             }
 
 
