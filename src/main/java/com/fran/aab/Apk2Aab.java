@@ -148,10 +148,22 @@ public class Apk2Aab {
      * 处理apk2aab
      */
     public void process() {
+        //        生成pad的  跟目录名字
+        mPadFileNames = new String[]{"init_pack"};
+//        assets下的  文件名
+        mPadAssetsRegs = new String[]{"ab"};
         // TODO: 2023/11/2 划分资源包
         String compileFilePath = compile();
 
-        List<File> padZipList = generatePad(compileFilePath);
+        List<File> padZipList = new ArrayList<>();
+
+//        padZipList.add(generatePad(compileFilePath, "init_pack", "ab"));
+
+
+//        生成zip的路径（先生成apk，获取AndroidManifest.xml.拷贝assets的。生成zip）
+        File padFile = generatePad(compileFilePath, "init_pack", "ab");
+
+        padZipList.add(padFile);
 
         String baseApkPath = linkSources(compileFilePath, "base.apk", Utils.linkPath(mApkDecodePath, "AndroidManifest.xml"));
         String basePath = unZipBase(baseApkPath, "base");
@@ -165,36 +177,38 @@ public class Apk2Aab {
      * 构建pad（Play Asset Delivery），除了这个还有个功能模块（<a href="https://developer.android.com/guide/playcore/feature-delivery?hl=zh-cn#feature-module-manifest">...</a>）
      * <a href="https://developer.android.com/guide/app-bundle/asset-delivery?hl=zh-cn#next-step-instructions">...</a>
      */
-    private List<File> generatePad(String compileFilePath) {
-        // TODO: 2023/11/2 copy符合规则的 assets下的目录到指定目录
-        List<File> outputZipList = new ArrayList<>();
-//        生成pad的  跟目录名字
-        mPadFileNames = new String[]{"init_pack"};
-//        assets下的  文件名
-        mPadAssetsRegs = new String[]{"ab"};
+    private File generatePad(String compileFilePath, String padName, String reg) {
         String packageName = "com.superwarrior.android";
+
         //       生成 manifest下的AndroidManifest.xml
-        String xmlPath = "E:\\work\\xh\\2023-11\\aab\\fran_aab_work\\manifest\\AndroidManifest.xml";
-        String split = "init_pack";
-        String sourceOriginFilesPath = "E:\\work\\xh\\2023-11\\aab\\10005-230925164927659848747\\assets\\ab";
-        String sourceTargetFilesPath = "E:\\work\\xh\\2023-11\\aab\\fran_aab_work\\init_pack";
+        String xmlPath = Utils.linkPath(mWorkPath, padName + "_temp", "AndroidManifest.xml");
 
 //        从assets copy 到tempFile的assets
-        generatePadManifest(packageName, split, xmlPath);
+        generatePadManifest(packageName, padName, xmlPath);
 
-        linkSources(compileFilePath, "init_pack.apk", xmlPath);
+        String padApkPath = linkSources(compileFilePath, padName + ".apk", xmlPath);
 
-        File originSource = new File(sourceOriginFilesPath);
-        Utils.copyFiles(originSource, new File(sourceTargetFilesPath));
-//        Utils.delDir(originSource);
+        String padPath = unZipBase(padApkPath, padName);
+
+        File assetsFile = new File(mApkDecodePath, "assets");
+        // 创建正则表达式模式对象
+        Pattern pattern = Pattern.compile(reg);
+        File[] canCopy = assetsFile.listFiles(file -> file.isDirectory() && pattern.matcher(file.getName()).find());
+
+        if (canCopy != null) {
+            for (File file : canCopy) {
+                Utils.copyFiles(file, new File(Utils.linkPath(padPath, "assets"), file.getName()));
+            }
+        }
+
 
 //        压缩成pad.zip
 
-        File padZipFile = new File(Utils.linkPath("E:\\work\\xh\\2023-11\\aab", "pad.zip"));
+        File padZipFile = new File(Utils.linkPath(mWorkPath, padName + ".zip"));
         try {
             FileOutputStream fos = new FileOutputStream(padZipFile);
             ZipOutputStream zipOut = new ZipOutputStream(fos, StandardCharsets.UTF_8);
-            File[] fileToZip = new File(sourceTargetFilesPath).getParentFile().listFiles();
+            File[] fileToZip = new File(padPath).listFiles();
 
             assert fileToZip != null;
             for (File file : fileToZip) {
@@ -210,9 +224,7 @@ public class Apk2Aab {
             e.printStackTrace();
         }
 //         构建asset.pb文件   说明模块协议缓冲区 (*.pb) 文件：这些文件提供了一些元数据，有助于向各个应用商店（如 Google Play）说明每个应用模块的内容。例如，BundleConfig.pb 提供了有关 bundle 本身的信息（如用于构建 app bundle 的构建工具版本），native.pb 和 resources.pb 说明了每个模块中的代码和资源，这在 Google Play 针对不同的设备配置优化 APK 时非常有用。
-
-        outputZipList.add(padZipFile);
-        return outputZipList;
+        return padZipFile;
     }
 
     /**
@@ -389,8 +401,8 @@ public class Apk2Aab {
                             aaptPath, outBaseApk, androidJarPath, minVersion, targetVersion, versionCode, versionName, androidXmlPath, compileFilePath);
 
         } else {
-            cmdLink = String.format("%s link --proto-format -o %s -I %s --manifest %s -R %s --auto-add-overlay",
-                            aaptPath, outBaseApk, androidJarPath, androidXmlPath, compileFilePath);
+            cmdLink = String.format("%s link --proto-format -o %s -I %s --manifest %s --auto-add-overlay",
+                            aaptPath, outBaseApk, androidJarPath, androidXmlPath);
         }
         try {
             RuntimeHelper.getInstance().run(cmdLink);
