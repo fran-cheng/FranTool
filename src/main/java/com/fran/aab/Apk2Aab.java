@@ -22,7 +22,6 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
@@ -62,9 +61,8 @@ public class Apk2Aab {
         Apk2Aab aab = new Apk2Aab("E:\\work\\xh\\2023-11\\aab\\10005-230925164927659848747");
         aab.process();
 //		aab.installAab("D:\\FranGitHub\\FranTool\\runtime\\app-debug");
-
-        // TODO: 2023/11/2 aab分pad
-
+//        FranPadInfo info = FranPadInfo.load(new File("E:\\work\\xh\\2023-11\\aab\\10005-230925164927659848747"));
+//        System.out.println(info.getPadInfo());
     }
 
 
@@ -146,43 +144,60 @@ public class Apk2Aab {
 
     }
 
+
     /**
      * 处理apk2aab
      */
     public void process() throws DocumentException {
-        // TODO: 2023/11/6 从目录读取yaml，或者允许从命令行输入
-
+        StringBuilder regs = new StringBuilder();
         List<File> padZipList = new ArrayList<>();
-        //        生成pad的  跟目录名字
-        mPadFileNames = new String[]{"init_pack"};
-//        assets下的  文件名
-        mPadAssetsRegs = new String[]{"ab"};
-
+        generatePads(regs, padZipList);
+//        构建aab，base
         String compileFilePath = compile();
-
-        if (mPadFileNames.length == mPadAssetsRegs.length) {
-            System.out.println("处理分pad");
-            String workManifestPath = Utils.linkPath(mApkDecodePath, "AndroidManifest.xml");
-            SAXReader saxReader = new SAXReader();
-            Document workDocument = saxReader.read(workManifestPath);
-            String packageName = workDocument.getRootElement().attributeValue("package");
-            for (int i = 0; i < mPadFileNames.length; i++) {
-                //        生成zip的路径（先生成apk，获取AndroidManifest.xml.拷贝assets的。生成zip）
-                File padFile = generatePad(compileFilePath, mPadFileNames[i], mPadAssetsRegs[i], packageName);
-                padZipList.add(padFile);
-            }
-        }
-
-
-        File baseZipFile = generateBase(compileFilePath);
-
+        File baseZipFile = generateBase(compileFilePath, regs.toString());
         generateAAB(baseZipFile, padZipList);
     }
 
-    private File generateBase(String compileFilePath) {
+    // TODO: 2023/11/6 优化，支持命令行输入
+    private void generatePads(StringBuilder regs, List<File> padZipList) throws DocumentException {
+        FranPadInfo info = FranPadInfo.load(new File(mApkDecodePath));
+        if (info != null) {
+
+            Map<String, String> padMapInfo = info.getPadInfo();
+            //        生成pad的  跟目录名字
+            mPadFileNames = padMapInfo.keySet().toArray(new String[0]);
+//        assets下的  文件名
+            mPadAssetsRegs = padMapInfo.values().toArray(new String[0]);
+
+
+            if (mPadFileNames.length == mPadAssetsRegs.length) {
+                System.out.println("处理分pad");
+                String workManifestPath = Utils.linkPath(mApkDecodePath, "AndroidManifest.xml");
+                SAXReader saxReader = new SAXReader();
+                Document workDocument = saxReader.read(workManifestPath);
+                String packageName = workDocument.getRootElement().attributeValue("package");
+                for (int i = 0; i < mPadFileNames.length; i++) {
+                    //        生成zip的路径（先生成apk，获取AndroidManifest.xml.拷贝assets的。生成zip）
+                    File padFile = generatePad(mPadFileNames[i], mPadAssetsRegs[i], packageName);
+                    padZipList.add(padFile);
+                }
+            }
+            //          先判断是否符合  notCopyAssetsFileRegList
+
+            for (String reg : mPadAssetsRegs) {
+                if (regs.length() > 0) {
+                    regs.append("|");
+                }
+                regs.append(reg);
+            }
+
+        }
+    }
+
+    private File generateBase(String compileFilePath, String regs) {
         String baseApkPath = linkSources(compileFilePath, "base.apk", Utils.linkPath(mApkDecodePath, "AndroidManifest.xml"));
         String basePath = unZipFile(baseApkPath, "base");
-        copySources(basePath, mApkDecodePath, mPadAssetsRegs);
+        copySources(basePath, mApkDecodePath, regs);
 
         File baseZipFile = new File(Utils.linkPath(mWorkPath, "base.zip"));
         try {
@@ -212,12 +227,12 @@ public class Apk2Aab {
      * 构建pad（Play Asset Delivery），除了这个还有个功能模块（<a href="https://developer.android.com/guide/playcore/feature-delivery?hl=zh-cn#feature-module-manifest">...</a>）
      * <a href="https://developer.android.com/guide/app-bundle/asset-delivery?hl=zh-cn#next-step-instructions">...</a>
      */
-    private File generatePad(String compileFilePath, String padName, String reg, String packageName) {
+    private File generatePad(String padName, String reg, String packageName) {
         //       生成 manifest下的AndroidManifest.xml
         String xmlPath = Utils.linkPath(mWorkPath, padName + "_temp", "AndroidManifest.xml");
         generatePadManifest(packageName, padName, xmlPath);
 
-        String padApkPath = linkSources(compileFilePath, padName + ".apk", xmlPath);
+        String padApkPath = linkSources(null, padName + ".apk", xmlPath);
 
         String padPath = unZipFile(padApkPath, padName);
 
@@ -473,25 +488,22 @@ public class Apk2Aab {
     /**
      * 拷贝资源
      */
-    private void copySources(String apkDecodeBasePath, String apkDecodePath, String[] notCopyAssetsFileRegList) {
+    private void copySources(String apkDecodeBasePath, String apkDecodePath, String regs) {
 
         File assetsFile = new File(Utils.linkPath(apkDecodePath, "assets"));
         if (assetsFile.exists()) {
-//          先判断是否符合  notCopyAssetsFileRegList
-            StringBuilder regs = new StringBuilder();
-            for (String reg : notCopyAssetsFileRegList) {
-                if (regs.length() > 0) {
-                    regs.append("|");
-                }
-                regs.append(reg);
-            }
-            // 创建正则表达式模式对象
-            Pattern pattern = Pattern.compile(regs.toString());
-            File[] canCopy = assetsFile.listFiles(file -> !file.isDirectory() || !pattern.matcher(file.getName()).find());
+            if (regs.isEmpty()) {
+                Utils.copyFiles(assetsFile, new File(Utils.linkPath(apkDecodeBasePath, "assets")));
+            } else {
 
-            if (canCopy != null) {
-                for (File file : canCopy) {
-                    Utils.copyFiles(file, new File(Utils.linkPath(apkDecodeBasePath, "assets"), file.getName()));
+                // 创建正则表达式模式对象
+                Pattern pattern = Pattern.compile(regs);
+                File[] canCopy = assetsFile.listFiles(file -> !file.isDirectory() || !pattern.matcher(file.getName()).find());
+
+                if (canCopy != null) {
+                    for (File file : canCopy) {
+                        Utils.copyFiles(file, new File(Utils.linkPath(apkDecodeBasePath, "assets"), file.getName()));
+                    }
                 }
             }
         }
