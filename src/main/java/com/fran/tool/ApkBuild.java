@@ -8,6 +8,7 @@ import com.fran.util.Sign;
 import com.fran.util.Utils;
 
 import org.dom4j.Document;
+import org.dom4j.DocumentException;
 
 import java.io.*;
 import java.util.Scanner;
@@ -19,7 +20,7 @@ import java.util.Scanner;
 public class ApkBuild {
 
 
-	public static void main(String[] args) throws IOException {
+	public static void main(String[] args) throws IOException, DocumentException {
 		ApkBuild apkBuild = new ApkBuild();
 		if (args.length != 2) {
 			throw new RuntimeException("参数不对!");

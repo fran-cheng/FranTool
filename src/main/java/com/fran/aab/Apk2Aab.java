@@ -5,15 +5,16 @@ import com.fran.util.RuntimeHelper;
 import com.fran.util.Utils;
 
 import org.dom4j.Document;
+import org.dom4j.DocumentException;
 import org.dom4j.DocumentHelper;
 import org.dom4j.Element;
 import org.dom4j.QName;
 import org.dom4j.io.OutputFormat;
+import org.dom4j.io.SAXReader;
 import org.dom4j.io.XMLWriter;
 
 import java.io.BufferedOutputStream;
 import java.io.File;
-import java.io.FileFilter;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -21,9 +22,10 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Scanner;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.zip.ZipEntry;
 import java.util.zip.ZipInputStream;
@@ -56,7 +58,7 @@ public class Apk2Aab {
      */
     private String[] mPadFileNames;
 
-    public static void main(String[] args) throws IOException {
+    public static void main(String[] args) throws DocumentException {
         Apk2Aab aab = new Apk2Aab("E:\\work\\xh\\2023-11\\aab\\10005-230925164927659848747");
         aab.process();
 //		aab.installAab("D:\\FranGitHub\\FranTool\\runtime\\app-debug");
@@ -147,29 +149,64 @@ public class Apk2Aab {
     /**
      * 处理apk2aab
      */
-    public void process() {
+    public void process() throws DocumentException {
+        // TODO: 2023/11/6 从目录读取yaml，或者允许从命令行输入
+        List<File> padZipList = new ArrayList<>();
         //        生成pad的  跟目录名字
         mPadFileNames = new String[]{"init_pack"};
 //        assets下的  文件名
         mPadAssetsRegs = new String[]{"ab"};
-        // TODO: 2023/11/2 划分资源包
+
+        Map<String, String> map = new HashMap<>();
+
+
         String compileFilePath = compile();
 
-        List<File> padZipList = new ArrayList<>();
+        if (mPadFileNames.length == mPadAssetsRegs.length) {
+            System.out.println("处理分pad");
+            String workManifestPath = Utils.linkPath(mApkDecodePath, "AndroidManifest.xml");
+            SAXReader saxReader = new SAXReader();
+            Document workDocument = saxReader.read(workManifestPath);
+            String packageName = workDocument.getRootElement().attributeValue("package");
+            for (int i = 0; i < mPadFileNames.length; i++) {
+                //        生成zip的路径（先生成apk，获取AndroidManifest.xml.拷贝assets的。生成zip）
+                File padFile = generatePad(compileFilePath, mPadFileNames[i], mPadAssetsRegs[i], packageName);
+                padZipList.add(padFile);
+            }
+        }
 
-//        padZipList.add(generatePad(compileFilePath, "init_pack", "ab"));
 
+        File baseZipFile = generateBase(compileFilePath);
 
-//        生成zip的路径（先生成apk，获取AndroidManifest.xml.拷贝assets的。生成zip）
-        File padFile = generatePad(compileFilePath, "init_pack", "ab");
+        generateAAB(baseZipFile, padZipList);
+    }
 
-        padZipList.add(padFile);
-
+    private File generateBase(String compileFilePath) {
         String baseApkPath = linkSources(compileFilePath, "base.apk", Utils.linkPath(mApkDecodePath, "AndroidManifest.xml"));
-        String basePath = unZipBase(baseApkPath, "base");
-
+        String basePath = unZipFile(baseApkPath, "base");
         copySources(basePath, mApkDecodePath, mPadAssetsRegs);
-        generateAAB(basePath, padZipList);
+
+        File baseZipFile = new File(Utils.linkPath(mWorkPath, "base.zip"));
+        try {
+            FileOutputStream fos = new FileOutputStream(baseZipFile);
+            ZipOutputStream zipOut = new ZipOutputStream(fos, StandardCharsets.UTF_8);
+            File[] fileToZip = new File(basePath).listFiles();
+
+            assert fileToZip != null;
+            for (File file : fileToZip) {
+                zipFile(file, file.getName(), zipOut);
+            }
+
+
+            zipOut.close();
+            fos.close();
+
+            System.out.println(baseZipFile.getName() + "文件压缩成功！");
+        } catch (IOException e) {
+            e.printStackTrace();
+        }
+
+        return baseZipFile;
     }
 
 
@@ -177,18 +214,14 @@ public class Apk2Aab {
      * 构建pad（Play Asset Delivery），除了这个还有个功能模块（<a href="https://developer.android.com/guide/playcore/feature-delivery?hl=zh-cn#feature-module-manifest">...</a>）
      * <a href="https://developer.android.com/guide/app-bundle/asset-delivery?hl=zh-cn#next-step-instructions">...</a>
      */
-    private File generatePad(String compileFilePath, String padName, String reg) {
-        String packageName = "com.superwarrior.android";
-
+    private File generatePad(String compileFilePath, String padName, String reg, String packageName) {
         //       生成 manifest下的AndroidManifest.xml
         String xmlPath = Utils.linkPath(mWorkPath, padName + "_temp", "AndroidManifest.xml");
-
-//        从assets copy 到tempFile的assets
         generatePadManifest(packageName, padName, xmlPath);
 
         String padApkPath = linkSources(compileFilePath, padName + ".apk", xmlPath);
 
-        String padPath = unZipBase(padApkPath, padName);
+        String padPath = unZipFile(padApkPath, padName);
 
         File assetsFile = new File(mApkDecodePath, "assets");
         // 创建正则表达式模式对象
@@ -200,10 +233,7 @@ public class Apk2Aab {
                 Utils.copyFiles(file, new File(Utils.linkPath(padPath, "assets"), file.getName()));
             }
         }
-
-
 //        压缩成pad.zip
-
         File padZipFile = new File(Utils.linkPath(mWorkPath, padName + ".zip"));
         try {
             FileOutputStream fos = new FileOutputStream(padZipFile);
@@ -216,12 +246,10 @@ public class Apk2Aab {
                     zipFile(file, file.getName(), zipOut);
                 }
             }
-
-
             zipOut.close();
             fos.close();
 
-            System.out.println("文件压缩成功！");
+            System.out.println(padZipFile.getName() + "文件压缩成功！");
         } catch (IOException e) {
             e.printStackTrace();
         }
@@ -239,6 +267,7 @@ public class Apk2Aab {
         // 添加"dist"命名空间前缀的命名空间声明
         manifest.addNamespace("dist", "http://schemas.android.com/apk/distribution");
         manifest.addAttribute("package", packageName);
+
         manifest.addAttribute("split", split);
         Element module = manifest.addElement(new QName("module", manifest.getNamespaceForPrefix("dist")));
         module.addAttribute(new QName("type", manifest.getNamespaceForPrefix("dist")), "asset-pack");
@@ -274,37 +303,19 @@ public class Apk2Aab {
         }
     }
 
-    private void generateAAB(String baseUnZipPath, List<File> padList) {
+    private void generateAAB(File baseZipFile, List<File> padList) {
         String bundleToolPath = Utils.linkPath(mRootPath, "aab-tool", "bundletool.jar");
         String outPutAabPath = Utils.linkPath(mWorkPath, "base.aab");
-        File baseZipFile = new File(Utils.linkPath(mWorkPath, "base.zip"));
-        try {
-            FileOutputStream fos = new FileOutputStream(baseZipFile);
-            ZipOutputStream zipOut = new ZipOutputStream(fos, StandardCharsets.UTF_8);
-            File[] fileToZip = new File(baseUnZipPath).listFiles();
 
-            assert fileToZip != null;
-            for (File file : fileToZip) {
-                zipFile(file, file.getName(), zipOut);
-            }
-
-
-            zipOut.close();
-            fos.close();
-
-            System.out.println("文件压缩成功！");
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-        String modules = baseZipFile.getPath();
+        StringBuilder modules = new StringBuilder(baseZipFile.getPath());
         if (padList.size() > 0) {
             for (File file : padList) {
-                modules = modules + "," + file.getPath();
+                modules.append(",").append(file.getPath());
             }
         }
 
 
-        String cmd = String.format("java -jar %s build-bundle --modules=%s --output=%s", bundleToolPath, modules, outPutAabPath);
+        String cmd = String.format("java -jar %s build-bundle --modules=%s --output=%s", bundleToolPath, modules.toString(), outPutAabPath);
         RuntimeHelper.getInstance().run(cmd);
 
         String dir = mApkDecodePath;
@@ -312,11 +323,11 @@ public class Apk2Aab {
         String name = new File(dir).getName();
         String outSignAab = Utils.linkPath(dir, name + "_sign.aab");
 
-        String keystorefile = info[0];
+        String keyStoreFile = info[0];
         String password = info[1];
 
 
-        String s = String.format("jarsigner -keystore %s -storepass %s -sigalg MD5withRSA -digestalg SHA1 -signedjar %s %s %s", keystorefile, password, outSignAab, outPutAabPath, info[2]);
+        String s = String.format("jarsigner -keystore %s -storepass %s -sigalg MD5withRSA -digestalg SHA1 -signedjar %s %s %s", keyStoreFile, password, outSignAab, outPutAabPath, info[2]);
 
         RuntimeHelper.getInstance().run(s);
 
@@ -420,7 +431,7 @@ public class Apk2Aab {
      * 解压base.apk
      * 通过unzip解压到base文件夹，目录结构：
      */
-    private String unZipBase(String apkFilePath, String outputName) {
+    private String unZipFile(String apkFilePath, String outputName) {
 
         String destDirectory = Utils.linkPath(mWorkPath, outputName);
         byte[] buffer = new byte[4096];
