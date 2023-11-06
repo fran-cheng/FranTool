@@ -149,12 +149,12 @@ public class Apk2Aab {
      */
     public void process() {
         // TODO: 2023/11/2 划分资源包
+        String compileFilePath = compile();
 
-        List<File> padZipList = generatePad();
+        List<File> padZipList = generatePad(compileFilePath);
 
-        String compileFIlePath = compile();
-        String baseApkPath = linkSources(compileFIlePath);
-        String basePath = unZipBase(baseApkPath);
+        String baseApkPath = linkSources(compileFilePath, "base.apk", Utils.linkPath(mApkDecodePath, "AndroidManifest.xml"));
+        String basePath = unZipBase(baseApkPath, "base");
 
         copySources(basePath, mApkDecodePath, mPadAssetsRegs);
         generateAAB(basePath, padZipList);
@@ -165,7 +165,7 @@ public class Apk2Aab {
      * 构建pad（Play Asset Delivery），除了这个还有个功能模块（<a href="https://developer.android.com/guide/playcore/feature-delivery?hl=zh-cn#feature-module-manifest">...</a>）
      * <a href="https://developer.android.com/guide/app-bundle/asset-delivery?hl=zh-cn#next-step-instructions">...</a>
      */
-    private List<File> generatePad() {
+    private List<File> generatePad(String compileFilePath) {
         // TODO: 2023/11/2 copy符合规则的 assets下的目录到指定目录
         List<File> outputZipList = new ArrayList<>();
 //        生成pad的  跟目录名字
@@ -175,12 +175,15 @@ public class Apk2Aab {
         String packageName = "com.superwarrior.android";
         //       生成 manifest下的AndroidManifest.xml
         String xmlPath = "E:\\work\\xh\\2023-11\\aab\\fran_aab_work\\manifest\\AndroidManifest.xml";
-        String split = "ab";
+        String split = "init_pack";
         String sourceOriginFilesPath = "E:\\work\\xh\\2023-11\\aab\\10005-230925164927659848747\\assets\\ab";
         String sourceTargetFilesPath = "E:\\work\\xh\\2023-11\\aab\\fran_aab_work\\init_pack";
 
 //        从assets copy 到tempFile的assets
         generatePadManifest(packageName, split, xmlPath);
+
+        linkSources(compileFilePath, "init_pack.apk", xmlPath);
+
         File originSource = new File(sourceOriginFilesPath);
         Utils.copyFiles(originSource, new File(sourceTargetFilesPath));
 //        Utils.delDir(originSource);
@@ -360,30 +363,35 @@ public class Apk2Aab {
     /**
      * 关联资源
      */
-    private String linkSources(String compileFIlePath) {
-        String outBaseApk = Utils.linkPath(mWorkPath, "base.apk");
+    private String linkSources(String compileFilePath, String outName, String androidXmlPath) {
+        String outBaseApk = Utils.linkPath(mWorkPath, outName);
         String aaptPath = getAapt2Path();
         String androidJarPath = Utils.linkPath(mRootPath, "aab-tool", "android.jar");
 
-        String minVersion = "21";
-        String targetVersion = "33";
-        String versionCode = "1";
-        String versionName = "1.0";
+        String cmdLink;
+        if (outName.contains("base.apk")) {
+            String minVersion = "21";
+            String targetVersion = "33";
+            String versionCode = "1";
+            String versionName = "1.0";
 
-        File apkdecodeFile = new File(mApkDecodePath);
-        try {
-            ApkInfo apkInfo = ApkInfo.load(apkdecodeFile);
-            minVersion = apkInfo.getMinSdkVersion();
-            targetVersion = apkInfo.getTargetSdkVersion();
-            versionCode = apkInfo.versionInfo.versionCode;
-            versionName = apkInfo.versionInfo.versionName;
-        } catch (AndrolibException e) {
-            throw new RuntimeException(e);
+            File apkdecodeFile = new File(mApkDecodePath);
+            try {
+                ApkInfo apkInfo = ApkInfo.load(apkdecodeFile);
+                minVersion = apkInfo.getMinSdkVersion();
+                targetVersion = apkInfo.getTargetSdkVersion();
+                versionCode = apkInfo.versionInfo.versionCode;
+                versionName = apkInfo.versionInfo.versionName;
+            } catch (AndrolibException e) {
+                throw new RuntimeException(e);
+            }
+            cmdLink = String.format("%s link --proto-format -o %s -I %s --min-sdk-version %s --target-sdk-version %s --version-code %s --version-name %s --manifest %s -R %s --auto-add-overlay",
+                            aaptPath, outBaseApk, androidJarPath, minVersion, targetVersion, versionCode, versionName, androidXmlPath, compileFilePath);
+
+        } else {
+            cmdLink = String.format("%s link --proto-format -o %s -I %s --manifest %s -R %s --auto-add-overlay",
+                            aaptPath, outBaseApk, androidJarPath, androidXmlPath, compileFilePath);
         }
-
-
-        String cmdLink = String.format("%s link --proto-format -o %s -I %s --min-sdk-version %s --target-sdk-version %s --version-code %s --version-name %s --manifest %s -R %s --auto-add-overlay",
-                        aaptPath, outBaseApk, androidJarPath, minVersion, targetVersion, versionCode, versionName, Utils.linkPath(mApkDecodePath, "AndroidManifest.xml"), compileFIlePath);
         try {
             RuntimeHelper.getInstance().run(cmdLink);
         } catch (Exception e) {
@@ -398,9 +406,9 @@ public class Apk2Aab {
      * 解压base.apk
      * 通过unzip解压到base文件夹，目录结构：
      */
-    private String unZipBase(String apkFilePath) {
+    private String unZipBase(String apkFilePath, String outputName) {
 
-        String destDirectory = Utils.linkPath(mWorkPath, "base");
+        String destDirectory = Utils.linkPath(mWorkPath, outputName);
         byte[] buffer = new byte[4096];
         try {
             // 创建解压缩输入流
