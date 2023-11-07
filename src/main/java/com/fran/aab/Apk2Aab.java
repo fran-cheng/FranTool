@@ -45,17 +45,7 @@ import brut.util.AaptManager;
 public class Apk2Aab {
     private final String mApkDecodePath;
     private final String mWorkPath;
-    private String mRootPath;
-
-    /**
-     * 分pad，  assets的Reg（正则）
-     */
-    private String[] mPadAssetsRegs;
-
-    /**
-     * 分pad， 资源包的名字 一般都是跟mPadAssetsRegs的长度一致
-     */
-    private String[] mPadFileNames;
+    private final String mRootPath;
 
     public static void main(String[] args) throws DocumentException {
         Apk2Aab aab = new Apk2Aab("E:\\work\\xh\\2023-11\\aab\\10005-230925164927659848747");
@@ -158,38 +148,42 @@ public class Apk2Aab {
         generateAAB(baseZipFile, padZipList);
     }
 
-    // TODO: 2023/11/6 优化，支持命令行输入
     private void generatePads(StringBuilder regs, List<File> padZipList) throws DocumentException {
+//     命令行获取，后续看情况支持
+
+
+
+//        读取配置参数
         FranPadInfo info = FranPadInfo.load(new File(mApkDecodePath));
         if (info != null) {
 
             Map<String, String> padMapInfo = info.getPadInfo();
-            //        生成pad的  跟目录名字
-            mPadFileNames = padMapInfo.keySet().toArray(new String[0]);
-//        assets下的  文件名
-            mPadAssetsRegs = padMapInfo.values().toArray(new String[0]);
-
-
-            if (mPadFileNames.length == mPadAssetsRegs.length) {
+            if (padMapInfo.size() > 0) {
                 System.out.println("处理分pad");
+                String[] padFileNames = padMapInfo.keySet().toArray(new String[0]);
+                String[] padAssetsRegs = padMapInfo.values().toArray(new String[0]);
+//                获取包名
                 String workManifestPath = Utils.linkPath(mApkDecodePath, "AndroidManifest.xml");
                 SAXReader saxReader = new SAXReader();
                 Document workDocument = saxReader.read(workManifestPath);
                 String packageName = workDocument.getRootElement().attributeValue("package");
-                for (int i = 0; i < mPadFileNames.length; i++) {
+
+                for (int i = 0; i < padFileNames.length; i++) {
                     //        生成zip的路径（先生成apk，获取AndroidManifest.xml.拷贝assets的。生成zip）
-                    File padFile = generatePad(mPadFileNames[i], mPadAssetsRegs[i], packageName);
+                    File padFile = generatePad(padFileNames[i], padAssetsRegs[i], packageName);
                     padZipList.add(padFile);
                 }
-            }
-            //          先判断是否符合  notCopyAssetsFileRegList
 
-            for (String reg : mPadAssetsRegs) {
-                if (regs.length() > 0) {
-                    regs.append("|");
+                //          先判断是否符合  notCopyAssetsFileRegList
+
+                for (String reg : padAssetsRegs) {
+                    if (regs.length() > 0) {
+                        regs.append("|");
+                    }
+                    regs.append(reg);
                 }
-                regs.append(reg);
             }
+
 
         }
     }
