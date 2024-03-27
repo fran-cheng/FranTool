@@ -21,10 +21,12 @@ public class SmaliFileMethodHelper {
 	}
 
 	public static void main(String[] args) {
-		String classPath = "E:\\www\\hw\\10007-240307120819429111809\\smali";
+		String classPath = "E:\\work\\xh\\需求\\methodCount\\mubao\\smali_classes2";
 		Set<String> methodCount = SmaliFileMethodHelper.getInstance().getMethodCount(classPath);
-		System.out.println("clm count : " + methodCount);
+//		System.out.println("clm count : " + methodCount);
 		System.out.println("clm count : " + methodCount.size());
+		System.out.println("clm mMethodCountValue count : " + mMethodCountValue.size());
+		System.out.println("clm mMethodCountValue  : " + mMethodCountValue);
 	}
 
 	public Set<String> getMethodCount(String path) {
@@ -58,10 +60,11 @@ public class SmaliFileMethodHelper {
 	}
 
 	private Set<String> mMethodCount = new HashSet<>();
+	private static Set<String> mMethodCountValue = new HashSet<>();
 
 	private void processMethodCount(String content) {
 		String className = getClassByFile(content);
-		String regex = "\\.method\\s.+|invoke-.*->.*";
+		String regex = "\\.method\\s.+|invoke-.*->.*|value\\s=.*->.*";
 		Pattern pattern = Pattern.compile(regex);
 		Matcher matcher = pattern.matcher(content);
 		while (matcher.find()) {
@@ -71,9 +74,14 @@ public class SmaliFileMethodHelper {
 				targetStr = makeMethodInvoke(line, className);
 			} else {
 				targetStr = parseMethodInvoke(line);
+//				if (line.contains("value =") && line.contains(".enum")) {
+//					continue;
+//				}
+
 			}
 			mMethodCount.add(targetStr.trim());
 		}
+
 	}
 
 	private String parseMethodInvoke(String line) {
@@ -81,6 +89,10 @@ public class SmaliFileMethodHelper {
 	}
 
 	private String makeMethodInvoke(String line, String className) {
+		return className + "->" + line.substring(line.lastIndexOf(" ")).trim();
+	}
+
+	private String makeMethodAnnotationInvoke(String line, String className) {
 		return className + "->" + line.substring(line.lastIndexOf(" ")).trim();
 	}
 
