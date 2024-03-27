@@ -15,18 +15,20 @@ import java.util.regex.Pattern;
  * * * 说明:计算smali文件的最大方法数
  **/
 public class SmaliFileMethodHelper {
+	/**
+	 * 是否启用严苛模式
+	 */
+	private final boolean IS_HARSH = false;
 
 	public static final SmaliFileMethodHelper getInstance() {
 		return InnerHolder.sInstance;
 	}
 
 	public static void main(String[] args) {
-		String classPath = "E:\\work\\xh\\需求\\methodCount\\mubao\\smali_classes2";
+		String classPath = "E:\\Downloaded\\文件\\mubao\\smali_classes3";
 		Set<String> methodCount = SmaliFileMethodHelper.getInstance().getMethodCount(classPath);
-//		System.out.println("clm count : " + methodCount);
+		System.out.println("clm count : " + methodCount);
 		System.out.println("clm count : " + methodCount.size());
-		System.out.println("clm mMethodCountValue count : " + mMethodCountValue.size());
-		System.out.println("clm mMethodCountValue  : " + mMethodCountValue);
 	}
 
 	public Set<String> getMethodCount(String path) {
@@ -60,11 +62,14 @@ public class SmaliFileMethodHelper {
 	}
 
 	private Set<String> mMethodCount = new HashSet<>();
-	private static Set<String> mMethodCountValue = new HashSet<>();
 
 	private void processMethodCount(String content) {
 		String className = getClassByFile(content);
-		String regex = "\\.method\\s.+|invoke-.*->.*|value\\s=.*->.*";
+		String regex = "\\.method\\s.+|invoke-.*->.*";
+		if (IS_HARSH) {
+			regex = regex + "|value\\s=.*->.*|(iget|iput).*;->.*";
+		}
+
 		Pattern pattern = Pattern.compile(regex);
 		Matcher matcher = pattern.matcher(content);
 		while (matcher.find()) {
@@ -74,9 +79,25 @@ public class SmaliFileMethodHelper {
 				targetStr = makeMethodInvoke(line, className);
 			} else {
 				targetStr = parseMethodInvoke(line);
-//				if (line.contains("value =") && line.contains(".enum")) {
-//					continue;
-//				}
+				if (IS_HARSH) {
+					if (line.contains("value =") && line.contains(".enum")) {
+						continue;
+					}
+					if (line.startsWith("iget") | line.startsWith("iput")) {
+//					严苛模式下可能需要计算这些值
+//					计算这个，可能有误差，  特殊情况下需要这个,
+						int index1 = targetStr.indexOf(":") + 1;
+						String tempStr = targetStr.substring(index1);
+						int index2 = tempStr.indexOf("$") + index1;
+						String type;
+						if (index2 > index1) {
+							type = targetStr.substring(index1, index2);
+						} else {
+							type = targetStr.substring(index1);
+						}
+						targetStr = type.replace("[", "").replace(";", "");
+					}
+				}
 
 			}
 			mMethodCount.add(targetStr.trim());
