@@ -18,7 +18,7 @@ public class SmaliFileMethodHelper {
 	/**
 	 * 是否启用严苛模式
 	 */
-	private final boolean IS_HARSH = false;
+	private final boolean IS_HARSH = true;
 
 	public static final SmaliFileMethodHelper getInstance() {
 		return InnerHolder.sInstance;
@@ -87,8 +87,7 @@ public class SmaliFileMethodHelper {
 //					严苛模式下可能需要计算这些值
 //					计算这个，可能有误差，  特殊情况下需要这个,
 						int index1 = targetStr.indexOf(":") + 1;
-						String tempStr = targetStr.substring(index1);
-						int index2 = tempStr.indexOf("$") + index1;
+						int index2 = targetStr.lastIndexOf("$");
 						String type;
 						if (index2 > index1) {
 							type = targetStr.substring(index1, index2);
