@@ -68,6 +68,9 @@ public class SmaliFileMethodHelper {
 		}
 		String content = readFileFromLine(file);
 		processMethodCount(content);
+		if (file.getName().toLowerCase().contains("field")){
+			System.out.println("clm: "+ file.getName());
+		}
 	}
 
 	private Set<String> mMethodCount = new HashSet<>();
@@ -135,17 +138,16 @@ public class SmaliFileMethodHelper {
 			}
 			if (!targetStr.contains("->")) {
 				targetStr = makeMethodInvoke(targetStr, className);
+
 			} else {
 				targetStr = targetStr.substring(targetStr.lastIndexOf(" ")).trim();
 			}
 
 			targetStr = targetStr.trim();
+
 			mFieldCount.add(targetStr);
 
-			if (targetStr.contains("FontFamilyFont")){
-				System.out.println("clm: "+mFieldCount.size());
-				System.out.println("clm targetStr :"+targetStr);
-			}
+
 		}
 	}
 
