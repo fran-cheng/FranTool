@@ -18,7 +18,7 @@ public class SmaliFileMethodHelper {
 	/**
 	 * 是否启用严苛模式
 	 */
-	private final boolean IS_HARSH = true;
+	private final boolean IS_HARSH = false;
 
 	public static final SmaliFileMethodHelper getInstance() {
 		return InnerHolder.sInstance;
@@ -26,13 +26,22 @@ public class SmaliFileMethodHelper {
 
 	public static void main(String[] args) {
 		String classPath = "E:\\Downloaded\\文件\\mubao\\smali_classes3";
-		Set<String> methodCount = SmaliFileMethodHelper.getInstance().getMethodCount(classPath);
+		int methodCount = SmaliFileMethodHelper.getInstance().getMethodCount(classPath);
 		System.out.println("clm count : " + methodCount);
-		System.out.println("clm count : " + methodCount.size());
 	}
 
-	public Set<String> getMethodCount(String path) {
-		return getMethodCount(new File(path));
+	public int getMethodCount(String path) {
+
+		getMethodCount(new File(path));
+		int methodCount = mMethodCount.size();
+		int fieldCount = mFieldCount.size();
+		System.out.println("methodCount: " + methodCount);
+		System.out.println("fieldCount: " + fieldCount);
+//		System.out.println("fieldCount: " + mFieldCount);
+		if (methodCount > fieldCount) {
+			return methodCount;
+		}
+		return fieldCount;
 	}
 
 	public Set<String> getMethodCount(File file) {
@@ -62,6 +71,7 @@ public class SmaliFileMethodHelper {
 	}
 
 	private Set<String> mMethodCount = new HashSet<>();
+	private Set<String> mFieldCount = new HashSet<>();
 
 	private void processMethodCount(String content) {
 		String className = getClassByFile(content);
@@ -102,6 +112,41 @@ public class SmaliFileMethodHelper {
 			mMethodCount.add(targetStr.trim());
 		}
 
+
+		processFieldCount(content);
+	}
+
+
+	private void processFieldCount(String content) {
+		String className = getClassByFile(content);
+		String regex = "(iget|iput|sget|sput).*|\\.field.*";
+		if (IS_HARSH) {
+//			regex = regex + "|value\\s=.*->.*|(iget|iput).*;->.*";
+		}
+
+		Pattern pattern = Pattern.compile(regex);
+		Matcher matcher = pattern.matcher(content);
+		while (matcher.find()) {
+			String line = matcher.group();
+			String targetStr = line;
+
+			if (line.contains(" = ")) {
+				targetStr = line.split(" = ")[0];
+			}
+			if (!targetStr.contains("->")) {
+				targetStr = makeMethodInvoke(targetStr, className);
+			} else {
+				targetStr = targetStr.substring(targetStr.lastIndexOf(" ")).trim();
+			}
+
+			targetStr = targetStr.trim();
+			mFieldCount.add(targetStr);
+
+			if (targetStr.contains("FontFamilyFont")){
+				System.out.println("clm: "+mFieldCount.size());
+				System.out.println("clm targetStr :"+targetStr);
+			}
+		}
 	}
 
 	private String parseMethodInvoke(String line) {
