@@ -13,12 +13,13 @@ import java.util.Random;
  **/
 public class RandomArabicMappingGenerator {
 	public static void main(String[] args) {
-		int length = 1000;
-		String randomArabicString = generateRandomArabicMapping(length);
+		int length = 10;
+		int lengthRow = 1000;
+		String randomArabicString = generateRandomArabicMapping(length,lengthRow);
 		saveToFile(randomArabicString, "random_arabic_mapping.txt");
 	}
 
-	public static String generateRandomArabicMapping(int length) {
+	public static String generateRandomArabicMapping(int length,int row) {
 		String arabicLetters = "ابتثجحخدذرزسشصضطظعغفقكلمنهوي";
 		char[] arabicChars = arabicLetters.toCharArray();
 		char[] shuffledArabicChars = shuffleArray(arabicChars);
@@ -29,10 +30,14 @@ public class RandomArabicMappingGenerator {
 
 		StringBuilder result = new StringBuilder();
 		Random random = new Random();
-		for (int i = 0; i < length; i++) {
-			char letter = arabicChars[random.nextInt(arabicChars.length)];
-			result.append(mapping.get(letter));
+		for (int rowLine = 0; rowLine < row; rowLine++ ){
+			for (int i = 0; i < length; i++) {
+				char letter = arabicChars[random.nextInt(arabicChars.length)];
+				result.append(mapping.get(letter));
+			}
+			result.append("\r\n");
 		}
+
 
 		return result.toString();
 	}
