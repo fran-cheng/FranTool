@@ -3,6 +3,9 @@ package com.fran.aab;
 import com.fran.tool.KeyTool;
 import com.fran.util.RuntimeHelper;
 import com.fran.util.Utils;
+import com.google.gson.Gson;
+import com.google.gson.JsonArray;
+import com.google.gson.JsonObject;
 
 import org.dom4j.Document;
 import org.dom4j.DocumentException;
@@ -22,6 +25,7 @@ import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
@@ -46,6 +50,8 @@ public class Apk2Aab {
 	private final String mApkDecodePath;
 	private final String mWorkPath;
 	private final String mRootPath;
+
+	private Collection<String> mDoNotCompres;
 
 	public static void main(String[] args) throws DocumentException {
 		Apk2Aab aab = new Apk2Aab("E:\\Downloaded\\xh_google_1.2_v2_202407081020_il2cpp");
@@ -145,7 +151,8 @@ public class Apk2Aab {
 //        构建aab，base
 		String compileFilePath = compile();
 		File baseZipFile = generateBase(compileFilePath, regs.toString());
-		generateAAB(baseZipFile, padZipList);
+		String buildConfigJsonPath = generateBundleConfigJson();
+		generateAAB(baseZipFile, padZipList, buildConfigJsonPath);
 	}
 
 	private void generatePads(StringBuilder regs, List<File> padZipList) throws DocumentException {
@@ -270,6 +277,26 @@ public class Apk2Aab {
 	}
 
 	/**
+	 * https://developer.android.com/build/building-cmdline?hl=zh-cn#bundleconfig
+	 *
+	 * @return path
+	 */
+	private String generateBundleConfigJson() {
+		String bundleConfigPath = Utils.linkPath(mWorkPath, "bundleConfig.json");
+		File bundleFile = new File(bundleConfigPath);
+//		后续考虑如果有就用他，修改
+		JsonObject jsonObject = FranBundleConfig.load(new File(mApkDecodePath), mRootPath);
+//		从模板copy一份出来,然后进行修改
+		mDoNotCompres.removeIf(x -> x.startsWith("META-INF"));
+		Gson gson = new Gson();
+		JsonArray jsonElements = gson.fromJson(gson.toJson(mDoNotCompres), JsonArray.class);
+		jsonObject.getAsJsonObject("compression").getAsJsonArray("uncompressedGlob").addAll(jsonElements);
+
+		Utils.writeFile(bundleFile, gson.toJson(jsonObject), "utf-8");
+		return bundleConfigPath;
+	}
+
+	/**
 	 * 所有 install-time Asset Pack 的总下载大小上限为 1 GB,默认使用install-time
 	 */
 	private void generatePadManifest(String packageName, String split, String xmlPath) {
@@ -315,7 +342,7 @@ public class Apk2Aab {
 		}
 	}
 
-	private void generateAAB(File baseZipFile, List<File> padList) {
+	private void generateAAB(File baseZipFile, List<File> padList, String bundleConfigJsonPath) {
 		String bundleToolPath = Utils.linkPath(mRootPath, "aab-tool", "bundletool.jar");
 		String outPutAabPath = Utils.linkPath(mWorkPath, "base.aab");
 
@@ -328,6 +355,11 @@ public class Apk2Aab {
 
 
 		String cmd = String.format("java -jar %s build-bundle --modules=%s --output=%s", bundleToolPath, modules.toString(), outPutAabPath);
+
+		if (bundleConfigJsonPath != null && new File(bundleConfigJsonPath).exists()) {
+			cmd += " --config=" + bundleConfigJsonPath;
+		}
+
 		RuntimeHelper.getInstance().run(cmd);
 
 		String dir = mApkDecodePath;
@@ -419,6 +451,7 @@ public class Apk2Aab {
 				targetVersion = apkInfo.getTargetSdkVersion();
 				versionCode = apkInfo.versionInfo.versionCode;
 				versionName = apkInfo.versionInfo.versionName;
+				mDoNotCompres = apkInfo.doNotCompress;
 			} catch (AndrolibException e) {
 				throw new RuntimeException(e);
 			}
