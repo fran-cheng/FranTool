@@ -6,7 +6,9 @@ import com.fran.util.Utils;
 import org.dom4j.DocumentException;
 
 import java.io.File;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 
 /**
  * @author 程良明
@@ -17,7 +19,10 @@ public class MainTest {
 	public static void main(String[] args) throws DocumentException {
 		String filePath = "E:\\temp\\IpMac";
 		File fileDir = new File(filePath);
-
+		List<String> arpStaticList = new ArrayList<>();
+		List<String> dhcpStaticList = new ArrayList<>();
+		StringBuilder dhcpStrBuild = new StringBuilder();
+		StringBuilder arpStrBuild = new StringBuilder();
 		HashMap<String, String> nameMac = new HashMap<>();
 
 		File[] files = fileDir.listFiles();
@@ -65,10 +70,37 @@ public class MainTest {
 					System.out.println("ip不相同: " + ipv4 + "  !=  " + macIp.split(":")[1]);
 				}
 			}
-			nameMac.put(name, mac + ":" + ipv4);
+//			static-bind ip-address 172.16.3.253 mask 255.255.252.0 hardware-address 9009-d034-af59
+			StringBuilder macTemp = new StringBuilder();
+			int i = 0;
+			for (String s : mac.toLowerCase().split("-")) {
+				if (i == 2 || i == 4) {
+					macTemp.append("-");
+				}
+				macTemp.append(s);
+				i++;
+			}
+//			static-bind ip-address 172.16.3.253 mask 255.255.252.0 hardware-address 9009-d034-af59
+			String strDhcp = String.format("static-bind ip-address %s mask 255.255.252.0 hardware-address %s", ipv4, macTemp);
+//			arp static 172.16.0.10 d85e-d35f-842c 1721 GigabitEthernet1/0/17
+			String strArp = String.format("arp static %s %s 1721 GigabitEthernet1/0/17", ipv4, macTemp);
+			nameMac.put(name, strDhcp + "::" + strArp);
+
 		}
 
-
+		for (String strDhcpArp : nameMac.values()) {
+			String[] strs = strDhcpArp.split("::");
+			String dhcpStr = strs[0];
+			String arpStr = strs[1];
+			dhcpStaticList.add(dhcpStr);
+			arpStaticList.add(arpStr);
+			dhcpStrBuild.append(dhcpStr).append("\n\r");
+			arpStrBuild.append(arpStr).append("\n\r");
+		}
+		File dhcpFile = new File("C:\\Users\\Fran\\Desktop\\temp\\ip配置\\dhcpFile.txt");
+		File arpFile = new File("C:\\Users\\Fran\\Desktop\\temp\\ip配置\\arpFile.txt");
+		Utils.writeFile(dhcpFile, dhcpStrBuild.toString(), "utf-8");
+		Utils.writeFile(arpFile, arpStrBuild.toString(), "utf-8");
 	}
 
 
