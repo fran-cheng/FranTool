@@ -19,7 +19,7 @@ public class ProguardGenerate {
 	//字典行数
 	private static int LENGTH = 5000;
 	//输出路径
-	private static final String ROOT_PATH = System.getProperty("user.dir") + "/app/";
+	private static final String ROOT_PATH = System.getProperty("user.dir");
 	//输出名称
 	private static final String FILE_NAME = "bt-proguard.txt";
 	private static Random random = new Random();
