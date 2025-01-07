@@ -1,5 +1,15 @@
 package com.fran.tool;
 
+import com.fran.util.Utils;
+
+import org.dom4j.Document;
+import org.dom4j.DocumentException;
+import org.dom4j.Element;
+import org.dom4j.Namespace;
+import org.dom4j.QName;
+import org.dom4j.io.SAXReader;
+
+import java.io.File;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
@@ -42,5 +52,37 @@ public class AESTool {
 		cipher.init(Cipher.DECRYPT_MODE, keySpec, ivSpec);
 		byte[] decodedBytes = Base64.getDecoder().decode(ciphertext);
 		return cipher.doFinal(decodedBytes);
+	}
+
+	public void changeManifestXml(String workPath) throws DocumentException {
+		File workDir = new File(workPath);
+		String workManifestPath = Utils.linkPath(workPath, "AndroidManifest.xml");
+		SAXReader saxReader = new SAXReader();
+		Document workDocument = null;
+		workDocument = saxReader.read(workManifestPath);
+		String workPackName = workDocument.getRootElement().attributeValue("package");
+		Namespace androidNamespace = Namespace.get("android", "http://schemas.android.com/apk/res/android");
+		Element workManifestElement = workDocument.getRootElement();
+		String applicationName = workManifestElement.element("application").attributeValue(new QName("name", androidNamespace));
+
+		if (applicationName != null && !applicationName.isEmpty()) {
+			// TODO: 2025/1/7 清单文件或者smali里面写入原来的application的位置
+//			File[] workSmaliFiles = workDir.listFiles((file, s) -> {
+//				String fileName = s.toLowerCase();
+//				return fileName.startsWith("smali");
+//			});
+//
+//			String applicationPath = applicationName.replaceAll("\\.", "/") + ".smali";
+//			assert workSmaliFiles != null;
+//			for (File file : workSmaliFiles) {
+//				File applicationFile = new File(file, applicationPath);
+//				if (applicationFile.exists()) {
+//					// TODO: 2025/1/7 修改smali的继承关系
+//					System.out.println("applicationFile.exists():"+applicationFile.getPath());
+//				}
+//			}
+		}
+		System.out.println("workPackName:" + workPackName);
+		System.out.println("applicationName:" + applicationName);
 	}
 }
