@@ -86,6 +86,20 @@ public class ApkBuild {
 		}
 	}
 
+
+	/**
+	 * 对dex进行加密
+	 */
+	private void dexEncrypt() {
+		// TODO: 2025/1/7 修改入口，或者application 确保加载的时候解密dex
+
+		// TODO: 2025/1/7 做白名单，根据类路径来确保部分不能在解密后加载的dex，移动到壳包
+
+		// TODO: 2025/1/7  回编译，需要要对dex进行加密，以及合并到同一个文件？
+
+		// TODO: 2025/1/7 对齐，签名
+	}
+
 	/**
 	 * 签名
 	 *
