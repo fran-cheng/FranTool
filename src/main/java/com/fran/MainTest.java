@@ -1,14 +1,12 @@
 package com.fran;
 
 
-import com.fran.util.Utils;
+import com.fran.tool.AESTool;
 
-import org.dom4j.DocumentException;
-
-import java.io.File;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.IOException;
+import java.nio.charset.StandardCharsets;
 
 /**
  * @author 程良明
@@ -16,91 +14,49 @@ import java.util.List;
  * * * 说明:测试用
  **/
 public class MainTest {
-	public static void main(String[] args) throws DocumentException {
-		String filePath = "E:\\temp\\IpMac";
-		File fileDir = new File(filePath);
-		List<String> arpStaticList = new ArrayList<>();
-		List<String> dhcpStaticList = new ArrayList<>();
-		StringBuilder dhcpStrBuild = new StringBuilder();
-		StringBuilder arpStrBuild = new StringBuilder();
-		HashMap<String, String> nameMac = new HashMap<>();
+	public static void main(String[] args) throws Exception {
 
-		File[] files = fileDir.listFiles();
-		for (File file : files) {
+		String path = "D:\\FranGitHub\\FranTool\\out\\apk\\app-release";
+//		ApkBuild.main(new String[]{"apkBuild", path});
+		String buildPath = "D:\\FranGitHub\\FranTool\\out\\apk\\app-release\\build\\apk";
 
-			String name = file.getName().split("-")[1];
-//			System.out.println(name);
-			String content = Utils.read(file);
-			String[] contentList = content.split("172.16.");
+		AESTool aesTool = new AESTool();
+//		原始
+		String classesDex = "D:\\FranGitHub\\FranTool\\out\\apk\\app-release\\build\\apk\\classes.dex";
+//		加密后
+		String classesXh = "D:\\FranGitHub\\FranTool\\out\\apk\\app-release\\build\\apk\\classes.xh";
 
-			String contentMac = contentList[0];
-			String contentIp = contentList[1];
-			int macSIndex = contentMac.lastIndexOf("Address.........:");
-			if (macSIndex <= 0) {
-				continue;
-			}
-			macSIndex = macSIndex + "Address.........:".length();
-			int macEIndex = contentMac.lastIndexOf("DHCPEnabled...........:Yes");
-			if (macEIndex <= 0) {
-				continue;
-			}
-			String mac = contentMac.substring(macSIndex, macEIndex);
-//			System.out.println(mac);
-//			int ipv4SIndex = contentIp.indexOf("IPv4Address...........:");
-//			if (ipv4SIndex <= 0) {
-//				continue;
-//			}
-//			ipv4SIndex = ipv4SIndex + "IPv4Address...........:".length();
-//			int ipv4EIndex = contentIp.indexOf("(Preferred)SubnetMask");
-//			if (ipv4EIndex <= 0) {
-//				continue;
-//			}
-			int ipv4EIndex = contentIp.indexOf("(Preferred)SubnetMask");
+		//		解密后
+		String classesXhDex = "D:\\FranGitHub\\FranTool\\out\\apk\\app-release\\build\\apk\\xh.dex";
 
-			String ipv4 = "172.16." + contentIp.substring(0, ipv4EIndex);
-//			System.out.println(ipv4);
-//			System.out.println();
-
-			if (nameMac.containsKey(name)) {
-				String macIp = nameMac.get(name);
-				System.out.println(name + ":重复上报: ip=" + ipv4);
-				if (ipv4.equals(macIp.split(":")[1])) {
-					System.out.println("ip相同: " + ipv4);
-				} else {
-					System.out.println("ip不相同: " + ipv4 + "  !=  " + macIp.split(":")[1]);
-				}
-			}
-//			static-bind ip-address 172.16.3.253 mask 255.255.252.0 hardware-address 9009-d034-af59
-			StringBuilder macTemp = new StringBuilder();
-			int i = 0;
-			for (String s : mac.toLowerCase().split("-")) {
-				if (i == 2 || i == 4) {
-					macTemp.append("-");
-				}
-				macTemp.append(s);
-				i++;
-			}
-//			static-bind ip-address 172.16.3.253 mask 255.255.252.0 hardware-address 9009-d034-af59
-			String strDhcp = String.format("static-bind ip-address %s mask 255.255.252.0 hardware-address %s", ipv4, macTemp);
-//			arp static 172.16.0.10 d85e-d35f-842c 1721 GigabitEthernet1/0/17
-			String strArp = String.format("arp static %s %s 1721 GigabitEthernet1/0/17", ipv4, macTemp);
-			nameMac.put(name, strDhcp + "::" + strArp);
-
+//		加密操作
+		byte[] classesDexAllByte = new FileInputStream(classesDex).readAllBytes();
+		String encryptStrBase64 = aesTool.encrypt(classesDexAllByte);
+		try {
+			// 先将Base64编码的字符串解码为字节数组
+			byte[] encryptBytes = encryptStrBase64.getBytes(StandardCharsets.UTF_8);
+			// 使用文件输出流写入到文件
+			FileOutputStream fos = new FileOutputStream(classesXh);
+			fos.write(encryptBytes);
+			fos.close();
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
 
-		for (String strDhcpArp : nameMac.values()) {
-			String[] strs = strDhcpArp.split("::");
-			String dhcpStr = strs[0];
-			String arpStr = strs[1];
-			dhcpStaticList.add(dhcpStr);
-			arpStaticList.add(arpStr);
-			dhcpStrBuild.append(dhcpStr).append("\n\r");
-			arpStrBuild.append(arpStr).append("\n\r");
+
+//		解密操作
+		byte[] classesXhAllByte = new FileInputStream(classesXh).readAllBytes();
+		byte[] decryptStrBase64 = aesTool.decrypt(new String(classesXhAllByte));
+		try {
+			// 先将Base64编码的字符串解码为字节数组
+			byte[] decryptBytes = decryptStrBase64;
+			// 使用文件输出流写入到文件
+			FileOutputStream fos = new FileOutputStream(classesXhDex);
+			fos.write(decryptBytes);
+			fos.close();
+		} catch (IOException e) {
+			e.printStackTrace();
 		}
-		File dhcpFile = new File("C:\\Users\\Fran\\Desktop\\temp\\ip配置\\dhcpFile.txt");
-		File arpFile = new File("C:\\Users\\Fran\\Desktop\\temp\\ip配置\\arpFile.txt");
-		Utils.writeFile(dhcpFile, dhcpStrBuild.toString(), "utf-8");
-		Utils.writeFile(arpFile, arpStrBuild.toString(), "utf-8");
 	}
 
 
