@@ -1,6 +1,7 @@
 package com.fran.tool;
 
 import com.fran.util.Utils;
+import com.google.gson.JsonObject;
 
 import org.dom4j.Document;
 import org.dom4j.DocumentException;
@@ -77,10 +78,16 @@ public class AESTool {
 //			for (File file : workSmaliFiles) {
 //				File applicationFile = new File(file, applicationPath);
 //				if (applicationFile.exists()) {
-//					// TODO: 2025/1/7 修改smali的继承关系
+//					// TODO: 2025/1/7 修改smali的继承关系(或者通过直接在壳的application里面直接调用？)
 //					System.out.println("applicationFile.exists():"+applicationFile.getPath());
 //				}
 //			}
+			// TODO: 2025/1/8 先写清单文件，或者写文件 base64加密？
+			File file = new File(workDir, Utils.linkPath("assets", "xh", "xhData.xh"));
+			JsonObject jsonObject = new JsonObject();
+			jsonObject.addProperty("application", applicationName);
+			Utils.writeFile(file, jsonObject.toString(), "utf-8");
+
 		}
 		System.out.println("workPackName:" + workPackName);
 		System.out.println("applicationName:" + applicationName);
