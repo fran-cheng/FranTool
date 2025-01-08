@@ -86,6 +86,13 @@ public class ApkBuild {
 		}
 	}
 
+	/**
+	 * 对整个apk进行加壳
+	 */
+
+	private void apkEncrypt() {
+		// TODO: 2025/1/8 直接把apk整个加密隐藏 ，可能涉及很多问题，后续看情况是否实现，理论上跟热更差不多
+	}
 
 	/**
 	 * 对dex进行加密
