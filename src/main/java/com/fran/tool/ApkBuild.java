@@ -8,9 +8,8 @@ import com.fran.util.Sign;
 import com.fran.util.Utils;
 
 import org.dom4j.Document;
-import org.dom4j.DocumentException;
 
-import java.io.*;
+import java.io.File;
 import java.util.Scanner;
 
 /**
@@ -20,7 +19,7 @@ import java.util.Scanner;
 public class ApkBuild {
 
 
-	public static void main(String[] args) throws IOException, DocumentException {
+	public static void main(String[] args) throws Exception {
 		ApkBuild apkBuild = new ApkBuild();
 		if (args.length != 2) {
 			throw new RuntimeException("参数不对!");
@@ -51,6 +50,8 @@ public class ApkBuild {
 			new Apk2Aab(path).process();
 		} else if (key.equalsIgnoreCase("aabInstall")) {
 			new Apk2Aab(new File(path).getParent()).installAab(path);
+		} else if (key.equalsIgnoreCase("dexEncrypt")) {
+			apkBuild.dexEncrypt(path);
 		}
 
 		Utils.log("Done!");
@@ -97,14 +98,40 @@ public class ApkBuild {
 	/**
 	 * 对dex进行加密
 	 */
-	private void dexEncrypt() {
-		// TODO: 2025/1/7 修改入口，或者application 确保加载的时候解密dex
+	private void dexEncrypt(String dir) throws Exception {
+		//修改入口，或者application 确保加载的时候解密dex
+		AESTool aesTool = new AESTool();
+		aesTool.changeManifestXml(dir);
 
 		// TODO: 2025/1/7 做白名单，根据类路径来确保部分不能在解密后加载的dex，移动到壳包
 
-		// TODO: 2025/1/7  回编译，需要要对dex进行加密，以及合并到同一个文件？
-
-		// TODO: 2025/1/7 对齐，签名
+		//   回编译
+		apkToolBuild(dir);
+		String buildApkPath = Utils.linkPath(dir, "build", "apk");
+		//对dex进行加密，以及合并到同一个文件？
+		File[] dexFiles = new File(buildApkPath).listFiles((file, s) -> {
+			String fileName = s.toLowerCase();
+			return fileName.endsWith("dex");
+		});
+//		加密dex
+		assert dexFiles != null;
+		for (File file : dexFiles) {
+			String context = aesTool.encryptFile(file);
+			Utils.writeFile(new File(file.getParent(), file.getName().replace("dex", "xed")), context, "utf-8");
+			file.delete();
+		}
+		Utils.copyFiles(new File("D:\\FranGitHub\\FranTool\\out\\apk\\shellDex\\classes.dex"), new File(buildApkPath, "classes.dex"));
+		File[] distFiles = new File(dir, "dist").listFiles((file, s) -> {
+			String fileName = s.toLowerCase();
+			return fileName.endsWith("apk");
+		});
+		assert distFiles != null;
+		File outFile = distFiles[0];
+//		重新压缩apk
+		Utils.zip(new File(buildApkPath), outFile);
+//		对齐，签名
+		zipalign(dir);
+		sign(dir);
 	}
 
 	/**

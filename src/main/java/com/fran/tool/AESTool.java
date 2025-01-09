@@ -42,6 +42,11 @@ public class AESTool {
 		System.out.println("decryptStr：" + decryptStr);
 	}
 
+	public String encryptFile(File file) throws Exception {
+		String content = Utils.read(file);
+		return encrypt(content.getBytes(StandardCharsets.UTF_8));
+	}
+
 	public String encrypt(byte[] plaintext) throws Exception {
 		Cipher cipher = Cipher.getInstance(ALGORITHM);
 		SecretKeySpec keySpec = new SecretKeySpec(KEY, "AES");
