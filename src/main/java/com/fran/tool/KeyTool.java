@@ -13,7 +13,7 @@ import java.io.File;
 public class KeyTool {
 	private static final String KET_FILE_NAME = "key.keystore";
 
-	KeyTool(String dir) {
+	public KeyTool(String dir) {
 		String alias = "key";
 		if (new File(dir, KET_FILE_NAME).exists()) {
 			Utils.log("key.keystore文件已存在");
