@@ -6,14 +6,21 @@ import com.fran.info.EncryptInfo;
 import com.fran.merge.MergeBase;
 import com.fran.util.RuntimeHelper;
 import com.fran.util.Sign;
+import com.fran.util.SmaliFileMethodHelper;
 import com.fran.util.Utils;
 import com.fran.util.Zip;
+import com.google.gson.Gson;
 
 import org.dom4j.Document;
 
 import java.io.File;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Scanner;
+import java.util.Set;
 
 /**
  * @author 程良明
@@ -104,19 +111,37 @@ public class ApkBuild {
 	private void dexEncrypt(String dir) throws Exception {
 		//修改入口，或者application 确保加载的时候解密dex
 		AESTool aesTool = new AESTool();
-		aesTool.changeManifestXml(dir);
-
+		String applicationName = aesTool.changeManifestXml(dir);
+//		配置文件，用来修改
+		File configFile = new File(dir, Utils.linkPath("assets", "xh", "xhData.xh"));
+		Map<String, Object> jsonLikeMap = new HashMap<>();
+		jsonLikeMap.put("application", applicationName);
 		// 白名单，根据类路径来确保部分不能在解密后加载的dex，移动到壳包
 		EncryptInfo encryptInfo = EncryptInfo.load(new File("D:\\FranGitHub\\FranTool\\tool\\property\\encrypt.yml"));
 		List<String> paths = encryptInfo.getPath();
+		Set<String> whiteDexList = new HashSet<>();
+		Map<String, Object> configMap = new HashMap<>();
+		if (configFile.exists()) {
+			configMap = new Gson().fromJson(Utils.read(configFile), HashMap.class);
+		}
 		if (paths != null) {
+			List<String> whileSmali;
+			if (configMap.containsKey("whileSmali")) {
+				whileSmali = (List<String>) configMap.get("whileSmali");
+			} else {
+				whileSmali = new ArrayList<>();
+			}
 			File[] smaliFiles = new File(dir).listFiles((file, s) -> {
 				String fileName = s.toLowerCase();
-				return fileName.startsWith("smali");
+				return fileName.startsWith("smali") && !whileSmali.contains(fileName);
 			});
 			assert smaliFiles != null;
 			int currentIndex = smaliFiles.length + 1;
+			whiteDexList.add("classes" + currentIndex + ".dex");
 			String lastSmaliPath = String.format("smali_classes%s", currentIndex);
+//			方法数统计
+			Map<String, Integer> smaliMaxCount = new HashMap<>();
+
 			for (File smali : smaliFiles) {
 				for (String path : paths) {
 //				创建一个新的smali，然后把壳也copy进来
@@ -124,15 +149,37 @@ public class ApkBuild {
 					if (saveFile.exists()) {
 						String saveFilePath = saveFile.getAbsolutePath();
 						String targetFilePath;
+//						需要计算方法数
 						if (saveFilePath.contains("smali_classes")) {
 							targetFilePath = saveFilePath.replaceFirst("smali_classes[0-9]+", lastSmaliPath);
 						} else {
 							targetFilePath = saveFilePath.replaceFirst("smali", lastSmaliPath);
 						}
+						int count = 0;
+						if (smaliMaxCount.containsKey(lastSmaliPath)) {
+							count = smaliMaxCount.get(lastSmaliPath);
+						}
+						int moveCount = SmaliFileMethodHelper.getInstance().getMethodCount(saveFilePath);
+						if (moveCount + count > 60000) {
+							currentIndex++;
+							whiteDexList.add("classes" + currentIndex + ".dex");
+							lastSmaliPath = String.format("smali_classes%s", currentIndex);
+							Utils.logInfo(lastSmaliPath);
+							count = moveCount;
+						} else {
+							count = count + moveCount;
+						}
+						smaliMaxCount.put(lastSmaliPath, count);
+
 						Utils.copyFiles(saveFile, new File(targetFilePath));
+						Utils.delDir(saveFile);
 					}
 				}
 			}
+
+
+			jsonLikeMap.put("whileSmali", smaliMaxCount.keySet());
+			jsonLikeMap.put("whileDex", whiteDexList);
 		}
 
 
@@ -147,11 +194,21 @@ public class ApkBuild {
 		File processEncryptFile = new File(disApkFile.getAbsolutePath().replace(".apk", "Encrypt"));
 		Zip.unZip(disApkFile, processEncryptFile);
 		//对dex进行加密，以及合并到同一个文件？
+		List<String> whileDex;
+		if (configMap.containsKey("whileDex")) {
+			whileDex = (List<String>) configMap.get("whileDex");
+		} else {
+			whileDex = new ArrayList<>();
+		}
+
 		File[] dexFiles = processEncryptFile.listFiles((file, s) -> {
 			String fileName = s.toLowerCase();
-			return fileName.endsWith("dex");
+			return fileName.endsWith("dex") && !whileDex.contains(fileName);
 		});
 		Utils.log("dexEncrypt");
+		if (true) {
+			return;
+		}
 //		加密dex
 		assert dexFiles != null;
 		for (File file : dexFiles) {
@@ -159,13 +216,21 @@ public class ApkBuild {
 			Utils.writeFile(new File(file.getParent(), file.getName().replace("dex", "xed")), context, "utf-8");
 			Utils.delDir(file);
 		}
+//		重命名
+		int newIndex = 2;
+		for (String fileName : whiteDexList) {
+			File file = new File(processEncryptFile, fileName);
+			String fileNewName = fileName.replaceFirst("[0-9]+", newIndex + "");
+			newIndex++;
+			file.renameTo(new File(processEncryptFile, fileNewName));
+		}
 		Utils.copyFiles(new File("D:\\FranGitHub\\FranTool\\out\\apk\\shellDex\\classes.dex"), new File(processEncryptFile, "classes.dex"));
-		Utils.copyFiles(new File("D:\\FranGitHub\\FranTool\\out\\apk\\shellDex\\classes.dex"), new File(processEncryptFile, "classes2.dex"));
 
 //		重新压缩apk
 		Zip.zip(processEncryptFile, disApkFile);
 //		对齐，签名
 		sign(dir);
+		Utils.writeFile(configFile, new Gson().toJson(jsonLikeMap), "utf-8");
 	}
 
 	/**

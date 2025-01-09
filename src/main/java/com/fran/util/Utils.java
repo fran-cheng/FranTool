@@ -19,7 +19,7 @@ import java.util.Scanner;
  * * 说明:工具
  **/
 public class Utils {
-	private static boolean info = false;
+	private static boolean info = true;
 
 	public static void main(String[] args) {
 		String apk = "APK´ò°ü";

@@ -1,7 +1,6 @@
 package com.fran.tool;
 
 import com.fran.util.Utils;
-import com.google.gson.JsonObject;
 
 import org.dom4j.Document;
 import org.dom4j.DocumentException;
@@ -65,7 +64,7 @@ public class AESTool {
 		return cipher.doFinal(decodedBytes);
 	}
 
-	public void changeManifestXml(String workPath) throws DocumentException {
+	public String changeManifestXml(String workPath) throws DocumentException {
 		File workDir = new File(workPath);
 		String workManifestPath = Utils.linkPath(workPath, "AndroidManifest.xml");
 		SAXReader saxReader = new SAXReader();
@@ -77,18 +76,12 @@ public class AESTool {
 		Element applicationElement = workManifestElement.element("application");
 
 		String applicationName = applicationElement.attributeValue(new QName("name", androidNamespace));
-
 		if (applicationName != null && !applicationName.isEmpty()) {
-			File file = new File(workDir, Utils.linkPath("assets", "xh", "xhData.xh"));
-			JsonObject jsonObject = new JsonObject();
-			jsonObject.addProperty("application", applicationName);
-			Utils.writeFile(file, jsonObject.toString(), "utf-8");
 			// TODO: 2025/1/9 从配置文件获取
 			applicationElement.setAttributeValue(new QName("name", androidNamespace), "fran.sdk.fortifyapk.ProxyApplication");
 		}
 		writeXmlFile(workManifestPath, workDocument);
-		System.out.println("workPackName:" + workPackName);
-		System.out.println("applicationName:" + applicationName);
+		return applicationName;
 	}
 
 	private void writeXmlFile(String outPutPath, Document document) {
