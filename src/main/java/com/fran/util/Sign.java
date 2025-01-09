@@ -26,7 +26,7 @@ public class Sign {
 		String apksignerPath = getApkSigner();
 
 		String s = String.format("java -jar %s sign --ks %s --ks-pass pass:%s --in %s --out %s", apksignerPath, keystorefile, password, inApk, out);
-		Utils.log("Sign", s);
+		Utils.log("Sign");
 		RuntimeHelper.getInstance().run(s);
 
 		new File(inApk).delete();

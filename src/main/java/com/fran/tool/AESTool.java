@@ -83,8 +83,8 @@ public class AESTool {
 			JsonObject jsonObject = new JsonObject();
 			jsonObject.addProperty("application", applicationName);
 			Utils.writeFile(file, jsonObject.toString(), "utf-8");
-
-			applicationElement.setAttributeValue(new QName("name", androidNamespace), "xh.sdk.test.XhApplication");
+			// TODO: 2025/1/9 从配置文件获取
+			applicationElement.setAttributeValue(new QName("name", androidNamespace), "fran.sdk.fortifyapk.ProxyApplication");
 		}
 		writeXmlFile(workManifestPath, workDocument);
 		System.out.println("workPackName:" + workPackName);

@@ -6,6 +6,7 @@ import com.fran.merge.MergeBase;
 import com.fran.util.RuntimeHelper;
 import com.fran.util.Sign;
 import com.fran.util.Utils;
+import com.fran.util.Zip;
 
 import org.dom4j.Document;
 
@@ -107,30 +108,32 @@ public class ApkBuild {
 
 		//   回编译
 		apkToolBuild(dir);
-		String buildApkPath = Utils.linkPath(dir, "build", "apk");
-		//对dex进行加密，以及合并到同一个文件？
-		File[] dexFiles = new File(buildApkPath).listFiles((file, s) -> {
-			String fileName = s.toLowerCase();
-			return fileName.endsWith("dex");
-		});
-//		加密dex
-		assert dexFiles != null;
-		for (File file : dexFiles) {
-			String context = aesTool.encryptFile(file);
-			Utils.writeFile(new File(file.getParent(), file.getName().replace("dex", "xed")), context, "utf-8");
-			file.delete();
-		}
-		Utils.copyFiles(new File("D:\\FranGitHub\\FranTool\\out\\apk\\shellDex\\classes.dex"), new File(buildApkPath, "classes.dex"));
 		File[] distFiles = new File(dir, "dist").listFiles((file, s) -> {
 			String fileName = s.toLowerCase();
 			return fileName.endsWith("apk");
 		});
 		assert distFiles != null;
-		File outFile = distFiles[0];
+		File disApkFile = distFiles[0];
+		File processEncryptFile = new File(disApkFile.getAbsolutePath().replace(".apk", "Encrypt"));
+		Zip.unZip(disApkFile, processEncryptFile);
+		//对dex进行加密，以及合并到同一个文件？
+		File[] dexFiles = processEncryptFile.listFiles((file, s) -> {
+			String fileName = s.toLowerCase();
+			return fileName.endsWith("dex");
+		});
+		Utils.log("dexEncrypt");
+//		加密dex
+		assert dexFiles != null;
+		for (File file : dexFiles) {
+			String context = aesTool.encryptFile(file);
+			Utils.writeFile(new File(file.getParent(), file.getName().replace("dex", "xed")), context, "utf-8");
+			Utils.delDir(file);
+		}
+		Utils.copyFiles(new File("D:\\FranGitHub\\FranTool\\out\\apk\\shellDex\\classes.dex"), new File(processEncryptFile, "classes.dex"));
+
 //		重新压缩apk
-		Utils.zip(new File(buildApkPath), outFile);
+		Zip.zip(processEncryptFile, disApkFile);
 //		对齐，签名
-		zipalign(dir);
 		sign(dir);
 	}
 
