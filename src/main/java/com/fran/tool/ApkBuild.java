@@ -2,6 +2,7 @@ package com.fran.tool;
 
 
 import com.fran.aab.Apk2Aab;
+import com.fran.info.EncryptInfo;
 import com.fran.merge.MergeBase;
 import com.fran.util.RuntimeHelper;
 import com.fran.util.Sign;
@@ -11,6 +12,7 @@ import com.fran.util.Zip;
 import org.dom4j.Document;
 
 import java.io.File;
+import java.util.List;
 import java.util.Scanner;
 
 /**
@@ -104,7 +106,35 @@ public class ApkBuild {
 		AESTool aesTool = new AESTool();
 		aesTool.changeManifestXml(dir);
 
-		// TODO: 2025/1/7 做白名单，根据类路径来确保部分不能在解密后加载的dex，移动到壳包
+		// 白名单，根据类路径来确保部分不能在解密后加载的dex，移动到壳包
+		EncryptInfo encryptInfo = EncryptInfo.load(new File("D:\\FranGitHub\\FranTool\\tool\\property\\encrypt.yml"));
+		List<String> paths = encryptInfo.getPath();
+		if (paths != null) {
+			File[] smaliFiles = new File(dir).listFiles((file, s) -> {
+				String fileName = s.toLowerCase();
+				return fileName.startsWith("smali");
+			});
+			assert smaliFiles != null;
+			int currentIndex = smaliFiles.length + 1;
+			String lastSmaliPath = String.format("smali_classes%s", currentIndex);
+			for (File smali : smaliFiles) {
+				for (String path : paths) {
+//				创建一个新的smali，然后把壳也copy进来
+					File saveFile = new File(smali, path);
+					if (saveFile.exists()) {
+						String saveFilePath = saveFile.getAbsolutePath();
+						String targetFilePath;
+						if (saveFilePath.contains("smali_classes")) {
+							targetFilePath = saveFilePath.replaceFirst("smali_classes[0-9]+", lastSmaliPath);
+						} else {
+							targetFilePath = saveFilePath.replaceFirst("smali", lastSmaliPath);
+						}
+						Utils.copyFiles(saveFile, new File(targetFilePath));
+					}
+				}
+			}
+		}
+
 
 		//   回编译
 		apkToolBuild(dir);
@@ -130,6 +160,7 @@ public class ApkBuild {
 			Utils.delDir(file);
 		}
 		Utils.copyFiles(new File("D:\\FranGitHub\\FranTool\\out\\apk\\shellDex\\classes.dex"), new File(processEncryptFile, "classes.dex"));
+		Utils.copyFiles(new File("D:\\FranGitHub\\FranTool\\out\\apk\\shellDex\\classes.dex"), new File(processEncryptFile, "classes2.dex"));
 
 //		重新压缩apk
 		Zip.zip(processEncryptFile, disApkFile);
