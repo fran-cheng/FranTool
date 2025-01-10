@@ -115,9 +115,6 @@ public class ApkBuild {
 //		配置文件，用来修改
 		File configFile = new File(dir, Utils.linkPath("assets", "xh", "xhData.xh"));
 		Map<String, Object> jsonLikeMap = new HashMap<>();
-		jsonLikeMap.put("application", applicationName);
-		jsonLikeMap.put("package", "xh.sdk.demo");
-		jsonLikeMap.put("version", "1");
 		// 白名单，根据类路径来确保部分不能在解密后加载的dex，移动到壳包
 		EncryptInfo encryptInfo = EncryptInfo.load(new File("D:\\FranGitHub\\FranTool\\tool\\property\\encrypt.yml"));
 		List<String> paths = encryptInfo.getPath();
@@ -125,6 +122,13 @@ public class ApkBuild {
 		Map<String, Object> configMap = new HashMap<>();
 		if (configFile.exists()) {
 			configMap = new Gson().fromJson(Utils.read(configFile), HashMap.class);
+			jsonLikeMap.put("application", configMap.get("application"));
+			jsonLikeMap.put("package", "xh.sdk.demo");
+			jsonLikeMap.put("version", "1");
+		} else {
+			jsonLikeMap.put("application", applicationName);
+			jsonLikeMap.put("package", "xh.sdk.demo");
+			jsonLikeMap.put("version", "1");
 		}
 
 		//对dex进行加密，以及合并到同一个文件？
