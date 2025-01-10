@@ -15,6 +15,7 @@ import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.io.RandomAccessFile;
 import java.nio.charset.StandardCharsets;
 import java.util.Base64;
 
@@ -33,29 +34,51 @@ public class AESTool {
 	private static final byte[] IV = "Fran_ChengXhGame".getBytes(StandardCharsets.UTF_8);
 
 	public static void main(String[] args) throws Exception {
-		String str = "clm";
+//		String str = "clm";
 		AESTool aesTool = new AESTool();
-		String encryptStr = aesTool.encrypt(str.getBytes(StandardCharsets.UTF_8));
-		String decryptStr = new String(aesTool.decrypt(encryptStr));
-		System.out.println("encryptStr：" + encryptStr);
-		System.out.println("decryptStr：" + decryptStr);
+//		String encryptStr = aesTool.encrypt(str.getBytes(StandardCharsets.UTF_8));
+//		String decryptStr = new String(aesTool.decrypt(encryptStr));
+//		System.out.println("encryptStr：" + encryptStr);
+//		System.out.println("decryptStr：" + decryptStr);
+
+		String originDexPath = "D:\\FranGitHub\\FranTool\\out\\apk\\FranDex\\classes.dex";
+		byte[] oriStr = getBytes(new File(originDexPath));
+//		String oriStr =originDexPath;
+		System.out.println("clm1:" + oriStr.length);
+		byte[] enStr1 = aesTool.encrypt(oriStr);
+		String enDexPath = "D:\\FranGitHub\\FranTool\\out\\apk\\FranDex\\classes.xed";
+		FileOutputStream fos = new FileOutputStream(enDexPath);
+		fos.write(enStr1);
+		fos.flush();
+		fos.close();
+
+		String deDexPath = "D:\\FranGitHub\\FranTool\\out\\apk\\FranDex\\declasses.dex";
+		File file = new File(enDexPath);
+		byte[] enStr = getBytes(file);
+		byte[] bytes = aesTool.decrypt(enStr);
+
+//		System.out.println("clm2:" + string.length());
+		FileOutputStream fos2 = new FileOutputStream(deDexPath);
+		fos2.write(bytes);
+		fos2.flush();
+		fos2.close();
 	}
 
 	public String encryptFile(File file) throws Exception {
 		String content = Utils.read(file);
-		return encrypt(content.getBytes(StandardCharsets.UTF_8));
+		return content;
 	}
 
-	public String encrypt(byte[] plaintext) throws Exception {
+	public byte[] encrypt(byte[] plaintext) throws Exception {
 		Cipher cipher = Cipher.getInstance(ALGORITHM);
 		SecretKeySpec keySpec = new SecretKeySpec(KEY, "AES");
 		IvParameterSpec ivSpec = new IvParameterSpec(IV);
 		cipher.init(Cipher.ENCRYPT_MODE, keySpec, ivSpec);
 		byte[] encryptedBytes = cipher.doFinal(plaintext);
-		return Base64.getEncoder().encodeToString(encryptedBytes);
+		return Base64.getEncoder().encode(encryptedBytes);
 	}
 
-	public byte[] decrypt(String ciphertext) throws Exception {
+	public byte[] decrypt(byte[] ciphertext) throws Exception {
 		Cipher cipher = Cipher.getInstance(ALGORITHM);
 		SecretKeySpec keySpec = new SecretKeySpec(KEY, "AES");
 		IvParameterSpec ivSpec = new IvParameterSpec(IV);
@@ -102,4 +125,13 @@ public class AESTool {
 			}
 		}
 	}
+
+	public static byte[] getBytes(File file) throws Exception {
+		RandomAccessFile r = new RandomAccessFile(file, "r");
+		byte[] buffer = new byte[(int) r.length()];
+		r.readFully(buffer);
+		r.close();
+		return buffer;
+	}
+
 }
