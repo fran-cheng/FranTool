@@ -216,9 +216,9 @@ public class ApkBuild {
 //		加密dex
 		assert dexFiles != null;
 		for (File file : dexFiles) {
-//			String context = aesTool.encryptFile(file);
-//			Utils.writeFile(new File(file.getParent(), file.getName().replace("dex", "xed")), context, "utf-8");
-//			Utils.delDir(file);
+			byte[] context = aesTool.encrypt(Utils.getBytes(file));
+			Utils.writeFile(file, context);
+			Utils.delDir(file);
 		}
 //		重命名
 		int newIndex = 2;

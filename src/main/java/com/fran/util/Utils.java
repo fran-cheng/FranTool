@@ -7,6 +7,7 @@ import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.io.RandomAccessFile;
 import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
@@ -31,7 +32,6 @@ public class Utils {
 			e.printStackTrace();
 		}
 	}
-
 
 
 	/**
@@ -257,4 +257,17 @@ public class Utils {
 		file.delete();
 	}
 
+	public static byte[] getBytes(File file) throws Exception {
+		RandomAccessFile r = new RandomAccessFile(file, "r");
+		byte[] buffer = new byte[(int) r.length()];
+		r.readFully(buffer);
+		r.close();
+		return buffer;
+	}
+
+	public static void writeFile(File file, byte[] bytes) throws Exception {
+		RandomAccessFile r = new RandomAccessFile(file, "rw");
+		r.write(bytes);
+		r.close();
+	}
 }
