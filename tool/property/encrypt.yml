@@ -1,5 +1,5 @@
 !!com.fran.aab.FranPadInfo
 path:
-  - "android"
-  - "androidx"
-  - "com/google"
+#  - "android"
+#  - "androidx"
+#  - "com/google"
