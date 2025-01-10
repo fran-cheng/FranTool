@@ -217,7 +217,7 @@ public class ApkBuild {
 		assert dexFiles != null;
 		for (File file : dexFiles) {
 			byte[] context = aesTool.encrypt(Utils.getBytes(file));
-			Utils.writeFile(file, context);
+			Utils.writeFile(new File(file.getParent(), file.getName().replace("dex", "xed")), context);
 			Utils.delDir(file);
 		}
 //		重命名

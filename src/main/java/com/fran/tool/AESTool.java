@@ -40,13 +40,13 @@ public class AESTool {
 //		System.out.println("encryptStr：" + encryptStr);
 //		System.out.println("decryptStr：" + decryptStr);
 
-		String originDexPath = "D:\\FranGitHub\\FranTool\\out\\apk\\FranDex\\classes.dex";
-		byte[] oriStr = Utils.getBytes(new File(originDexPath));
-//		String oriStr =originDexPath;
-		System.out.println("clm1:" + oriStr.length);
-		byte[] enStr1 = aesTool.encrypt(oriStr);
+//		String originDexPath = "D:\\FranGitHub\\FranTool\\out\\apk\\FranDex\\classes.dex";
+//		byte[] oriStr = Utils.getBytes(new File(originDexPath));
+////		String oriStr =originDexPath;
+//		System.out.println("clm1:" + oriStr.length);
+//		byte[] enStr1 = aesTool.encrypt(oriStr);
 		String enDexPath = "D:\\FranGitHub\\FranTool\\out\\apk\\FranDex\\classes.xed";
-		Utils.writeFile(new File(enDexPath), enStr1);
+//		Utils.writeFile(new File(enDexPath), enStr1);
 
 		String deDexPath = "D:\\FranGitHub\\FranTool\\out\\apk\\FranDex\\declasses.dex";
 		File file = new File(enDexPath);
