@@ -124,13 +124,26 @@ public class ApkBuild {
 		if (configFile.exists()) {
 			configMap = new Gson().fromJson(Utils.read(configFile), HashMap.class);
 		}
-		if (paths != null) {
-			List<String> whileSmali;
-			if (configMap.containsKey("whileSmali")) {
-				whileSmali = (List<String>) configMap.get("whileSmali");
-			} else {
-				whileSmali = new ArrayList<>();
+
+		//对dex进行加密，以及合并到同一个文件？
+		List<String> whileDex;
+		if (configMap.containsKey("whileDex")) {
+			whileDex = (List<String>) configMap.get("whileDex");
+		} else {
+			whileDex = new ArrayList<>();
+		}
+		List<String> whileSmali;
+		//			方法数统计
+		Map<String, Integer> smaliMaxCount = new HashMap<>();
+		if (configMap.containsKey("whileSmali")) {
+			whileSmali = (List<String>) configMap.get("whileSmali");
+			for (String key : whileSmali) {
+				smaliMaxCount.put(key, 0);
 			}
+		} else {
+			whileSmali = new ArrayList<>();
+		}
+		if (paths != null) {
 			File[] smaliFiles = new File(dir).listFiles((file, s) -> {
 				String fileName = s.toLowerCase();
 				return fileName.startsWith("smali") && !whileSmali.contains(fileName);
@@ -139,8 +152,7 @@ public class ApkBuild {
 			int currentIndex = smaliFiles.length + 1;
 			whiteDexList.add("classes" + currentIndex + ".dex");
 			String lastSmaliPath = String.format("smali_classes%s", currentIndex);
-//			方法数统计
-			Map<String, Integer> smaliMaxCount = new HashMap<>();
+
 
 			for (File smali : smaliFiles) {
 				for (String path : paths) {
@@ -179,10 +191,10 @@ public class ApkBuild {
 
 
 			jsonLikeMap.put("whileSmali", smaliMaxCount.keySet());
+			whiteDexList.addAll(whileDex);
 			jsonLikeMap.put("whileDex", whiteDexList);
 		}
-
-
+		Utils.writeFile(configFile, new Gson().toJson(jsonLikeMap), "utf-8");
 		//   回编译
 		apkToolBuild(dir);
 		File[] distFiles = new File(dir, "dist").listFiles((file, s) -> {
@@ -193,22 +205,12 @@ public class ApkBuild {
 		File disApkFile = distFiles[0];
 		File processEncryptFile = new File(disApkFile.getAbsolutePath().replace(".apk", "Encrypt"));
 		Zip.unZip(disApkFile, processEncryptFile);
-		//对dex进行加密，以及合并到同一个文件？
-		List<String> whileDex;
-		if (configMap.containsKey("whileDex")) {
-			whileDex = (List<String>) configMap.get("whileDex");
-		} else {
-			whileDex = new ArrayList<>();
-		}
 
 		File[] dexFiles = processEncryptFile.listFiles((file, s) -> {
 			String fileName = s.toLowerCase();
 			return fileName.endsWith("dex") && !whileDex.contains(fileName);
 		});
 		Utils.log("dexEncrypt");
-		if (true) {
-			return;
-		}
 //		加密dex
 		assert dexFiles != null;
 		for (File file : dexFiles) {
@@ -230,7 +232,6 @@ public class ApkBuild {
 		Zip.zip(processEncryptFile, disApkFile);
 //		对齐，签名
 		sign(dir);
-		Utils.writeFile(configFile, new Gson().toJson(jsonLikeMap), "utf-8");
 	}
 
 	/**
