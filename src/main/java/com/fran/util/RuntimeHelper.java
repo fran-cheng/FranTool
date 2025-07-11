@@ -53,4 +53,36 @@ public class RuntimeHelper {
 
 		return stringBuilder.toString();
 	}
+
+	/**
+	 * 执行DOS命令,exe等
+	 */
+	public String run(String command, boolean isShowLog) {
+		StringBuilder stringBuilder = new StringBuilder("");
+		Runtime run = Runtime.getRuntime();
+		try {
+			Utils.log(command);
+			if (System.getProperties().getProperty("os.name").toUpperCase().contains("WINDOWS")) {
+				command = "cmd /c " + command;
+			}
+			Process process = run.exec(command);
+			InputStream reader = process.getInputStream();
+			BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(reader));
+			String ss;
+			while ((ss = bufferedReader.readLine()) != null) {
+				if (isShowLog) {
+					Utils.log(ss);
+				}
+				stringBuilder.append(ss).append("\n");
+			}
+			if (process.waitFor() != 0) {
+				Utils.log("执行失败: " + process.waitFor());
+			}
+
+		} catch (Exception e) {
+			e.printStackTrace();
+		}
+
+		return stringBuilder.toString();
+	}
 }

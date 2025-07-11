@@ -1,6 +1,8 @@
 package com.fran.util;
 
 
+import org.jose4j.json.internal.json_simple.JSONObject;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -12,8 +14,12 @@ import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.HashSet;
 import java.util.Objects;
 import java.util.Scanner;
+import java.util.Set;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 /**
  * @author 程良明
@@ -270,4 +276,84 @@ public class Utils {
 		r.write(bytes);
 		r.close();
 	}
+
+
+	/**
+	 * 通过 readelf -l 命令获取 .so 文件的对齐大小
+	 *
+	 * @param soPath .so 文件绝对路径
+	 * @return "4KB对齐"、"16KB对齐" 或错误信息
+	 */
+	public static String checkAlignWithReadElf(String soPath) {
+		JSONObject jsonObject = new JSONObject();
+		// 校验文件存在性
+		File soFile = new File(soPath);
+		if (!soFile.exists()) {
+			return "错误：文件不存在 - " + soPath;
+		}
+		if (!soFile.canRead()) {
+			return "错误：无读取权限 - " + soPath;
+		}
+		checkAlignWithReadElf(soFile, jsonObject);
+
+		return jsonObject.toJSONString();
+	}
+
+	private static void checkAlignWithReadElf(File file, JSONObject jsonObject) {
+		if (file.isDirectory()) {
+//			遍历，返回json
+			File[] files = file.listFiles();
+			for (File f : files) {
+				checkAlignWithReadElf(f, jsonObject);
+			}
+		} else {
+			String key = linkPath(file.getParentFile().getName(), file.getName());
+			String value = parseReadElfOutput(RuntimeHelper.getInstance().run("readelf -l " + file.getPath(), false));
+			jsonObject.put(key, value);
+		}
+	}
+
+	/**
+	 * 解析 readelf -l 的输出，提取 LOAD 段的 Align 值
+	 */
+	private static String parseReadElfOutput(String output) {
+		// 匹配 LOAD 段及其后续行的正则表达式
+		Pattern loadPattern = Pattern.compile(
+						"LOAD\\s+" +                      // 匹配"LOAD"开头
+										"0x[0-9a-fA-F]+\\s+" +           // 匹配Offset
+										"0x[0-9a-fA-F]+\\s+" +           // 匹配VirtAddr
+										"0x[0-9a-fA-F]+\\s+" +           // 匹配PhysAddr
+										"0x[0-9a-fA-F]+\\s+" +           // 匹配FileSiz
+										"0x[0-9a-fA-F]+\\s+" +           // 匹配MemSiz
+										"[RWE ]+\\s+" +                  // 匹配Flags
+										"0x([0-9a-fA-F]+)"               // 匹配Align并捕获值
+		);
+
+		Matcher loadMatcher = loadPattern.matcher(output);
+
+		// 收集所有LOAD段的对齐值
+		Set<String> alignValues = new HashSet<>();
+		while (loadMatcher.find()) {
+			alignValues.add(loadMatcher.group(1));
+		}
+
+		// 检查对齐值是否一致
+		if (alignValues.isEmpty()) {
+			return "未找到LOAD段，可能不是有效的ELF共享库";
+		} else if (alignValues.size() > 1) {
+			return "警告：多个LOAD段对齐值不一致：" + alignValues;
+		} else {
+			String alignHex = alignValues.iterator().next();
+			long align = Long.parseLong(alignHex, 16);
+
+			if (align == 0x1000) {
+				return "4KB对齐";
+			} else if (align == 0x4000) {
+				return "16KB对齐";
+			} else {
+				return "对齐值：" + align + "字节（" + (align / 1024) + "KB）";
+			}
+		}
+	}
+
 }
