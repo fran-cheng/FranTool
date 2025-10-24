@@ -1,3 +1,3 @@
 !!com.fran.aab.FranPadInfo
 padInfo:
-  init_pack: "ab"
+  init_pack: "(ab|^Config.*bytes$|channel_data.xh|logo.png|PrivacyConfig.json|SdkCfg.byte)"
